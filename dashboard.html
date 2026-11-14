@@ -465,51 +465,6 @@
     .chart-card { display: flex; flex-direction: column; }
     canvas { max-width: 100%; }
 
-    /* =====================================================================
-       MATRIX
-       ===================================================================== */
-    .heat-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    #zone-heat { border-collapse: separate; border-spacing: 3px; width: 100%; min-width: 600px; }
-    #zone-heat th, #zone-heat td {
-      font-size: 11px; padding: 7px 9px; border-radius: 6px;
-      text-align: center;
-    }
-    /* Headers may wrap so the full set of columns fits without side-scrolling;
-       the wrapper still scrolls horizontally if the data grows beyond the card. */
-    #zone-heat th { white-space: normal; }
-    #zone-heat td { white-space: nowrap; }
-    #zone-heat thead th {
-      background: var(--surface-2); color: var(--text-2); font-weight: 700;
-      cursor: pointer; border: 1px solid var(--border);
-    }
-    #zone-heat thead th:hover { color: var(--text); }
-    #zone-heat tbody th {
-      background: var(--surface-2); color: var(--text); font-weight: 700;
-      text-align: left; cursor: pointer; position: sticky; left: 0; z-index: 1;
-      border: 1px solid var(--border);
-    }
-    #zone-heat tbody th:hover { color: var(--accent); }
-    #zone-heat td {
-      color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums;
-      border: 1px solid transparent;
-    }
-    #zone-heat td[data-col] { cursor: pointer; }
-    #zone-heat td:focus-visible,
-    #zone-heat th:focus-visible {
-      outline: 2px solid var(--accent); outline-offset: -2px;
-    }
-    .seg.matrix-seg { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 470px; margin-bottom: 10px; }
-    #zone-heat .hdr-on { background: var(--accent-soft); color: var(--accent); }
-    #zone-heat td.cell-on { outline: 2px solid var(--accent); outline-offset: -2px; }
-    #zone-heat .tot {
-      background: var(--surface-3); color: var(--text-2); font-weight: 800; cursor: default;
-      border: 1px solid var(--border);
-    }
-    @media (max-width: 640px) {
-      #zone-heat { min-width: 540px; }
-      #zone-heat th, #zone-heat td { font-size: 10px; padding: 6px; }
-    }
-
     ::selection { background: var(--accent-soft); }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1167,21 +1122,6 @@
         </div>
       </div>
 
-      <!-- FORMS x ZONES / SENATORIAL DISTRICTS -->
-      <section class="card">
-        <div class="card-head">
-          <h2 class="card-title" id="zone-heat-title">Perpetrators vs victims</h2>
-          <span class="card-hint">Click a cell, row or column to cross-filter</span>
-        </div>
-        <div class="seg matrix-seg" role="tablist" aria-label="Matrix view">
-          <button class="seg-btn is-active" data-matrix="pv" onclick="setMatrixMode('pv')" role="tab">Perpetrators × Victims</button>
-          <button class="seg-btn" data-matrix="fp" onclick="setMatrixMode('fp')" role="tab">Forms × Perpetrators</button>
-        </div>
-        <p class="muted" id="zone-heat-note" style="margin-bottom:8px"></p>
-        <div class="heat-wrap">
-          <table id="zone-heat"></table>
-        </div>
-      </section>
     </div>
   </main>
 
@@ -2542,7 +2482,6 @@
       renderActorRows();
       renderListPage();
       updateTrendChart();
-      updateHeatmap();
       renderCrossfilterBar();
       renderSignalsTable();
       renderTension();
@@ -2603,212 +2542,12 @@
     }
 
     // ============================================================
-    // 4c. Cross-tab matrix — perpetrators x victims, or forms x
-    //     perpetrators. Cells are row shares in percent.
-    // ============================================================
-    let matrixMode = 'pv';
-
-    const MATRIX_MODES = {
-      pv: { title: 'Perpetrators × victims', rowKey: 'perp', colKey: 'victim',
-            rowWord: 'perpetrators', colWord: 'victim categories' },
-      fp: { title: 'Forms of violence × perpetrators', rowKey: 'form', colKey: 'perp',
-            rowWord: 'forms', colWord: 'perpetrators' }
-    };
-
-    function setMatrixMode(mode) {
-      if (!MATRIX_MODES[mode]) return;
-      matrixMode = mode;
-      document.querySelectorAll('.matrix-seg .seg-btn').forEach(b => {
-        b.classList.toggle('is-active', b.dataset.matrix === matrixMode);
-      });
-      updateHeatmap();
-    }
-
-    // Low is green, high is red, passing through amber in the middle.
-    function heatRgb(t) {
-      const lo = [22, 163, 74], mid = [234, 179, 8], hi = [220, 38, 38];
-      const from = t < 0.5 ? lo : mid;
-      const to = t < 0.5 ? mid : hi;
-      const u = t < 0.5 ? t * 2 : (t - 0.5) * 2;
-      return 'rgb(' + from.map((c, i) => Math.round(c + (to[i] - c) * u)).join(',') + ')';
-    }
-
-    function updateHeatmap() {
-      const table = document.getElementById('zone-heat');
-      if (!table) return;
-
-      const cfg = MATRIX_MODES[matrixMode];
-      const note = document.getElementById('zone-heat-note');
-      const title = document.getElementById('zone-heat-title');
-
-      // The matrix's own axes are excluded so a pick never collapses the
-      // matrix it came from.
-      const agg = aggOf([cfg.rowKey, cfg.colKey]);
-      const tab = matrixMode === 'pv' ? agg.perpVictim : agg.formPerp;
-      const rowCounts = matrixMode === 'pv' ? agg.perpCounts : agg.formCounts;
-      const colCounts = matrixMode === 'pv' ? agg.victimCounts : agg.perpCounts;
-
-      // No fixed cap: every value the data carries gets its own row or column,
-      // ordered by volume, so new categories appear as soon as the sheet grows.
-      const byVolume = counts => Object.keys(counts)
-        .sort((a, b) => counts[b] - counts[a] || String(a).localeCompare(String(b)));
-      const rows = byVolume(rowCounts);
-      const cols = byVolume(colCounts);
-
-      if (title) title.textContent = cfg.title;
-
-      if (!rows.length || !cols.length) {
-        table.innerHTML = '<tbody><tr><td class="tot" style="text-align:center;padding:18px">' +
-          'No records for this selection</td></tr></tbody>';
-        if (note) note.textContent = 'Nothing to cross-tabulate for the current filters.';
-        return;
-      }
-
-      const cellVal = (r, c) => (tab[r] || {})[c] || 0;
-
-      // Row shares run over every column of the cross-tab, not just the six
-      // shown, so a row adds up to the part actually displayed.
-      const rowTotals = {};
-      rows.forEach(r => {
-        let sum = 0;
-        const bucket = tab[r] || {};
-        Object.keys(bucket).forEach(c => { sum += bucket[c]; });
-        rowTotals[r] = sum;
-      });
-
-      let grand = 0;
-      const colTotals = {};
-      Object.keys(tab).forEach(r => {
-        const bucket = tab[r];
-        Object.keys(bucket).forEach(c => {
-          grand += bucket[c];
-          colTotals[c] = (colTotals[c] || 0) + bucket[c];
-        });
-      });
-
-      // A row or column with no linked records would only render as a blank
-      // line, so it is left out of the table (the totals still count it).
-      const shownRows = rows.filter(r => rowTotals[r] > 0);
-      const shownCols = cols.filter(c => (colTotals[c] || 0) > 0);
-
-      if (!shownRows.length || !shownCols.length) {
-        table.innerHTML = '<tbody><tr><td class="tot" style="text-align:center;padding:18px">' +
-          'No linked records for this selection</td></tr></tbody>';
-        return;
-      }
-
-      // Whole-number shares that still add up to 100: floor everything, then
-      // hand the leftover points to the largest remainders.
-      function roundShares(values) {
-        const total = values.reduce((a, b) => a + b, 0);
-        if (!total) return values.map(() => 0);
-        const exact = values.map(v => (v / total) * 100);
-        const out = exact.map(Math.floor);
-        const order = exact
-          .map((v, i) => [v - Math.floor(v), i])
-          .sort((a, b) => b[0] - a[0] || a[1] - b[1]);
-        let left = 100 - out.reduce((a, b) => a + b, 0);
-        for (let k = 0; k < left; k++) out[order[k % order.length][1]]++;
-        return out;
-      }
-
-      const rowPct = {};
-      let maxPct = 0;
-      shownRows.forEach(r => {
-        rowPct[r] = roundShares(shownCols.map(c => cellVal(r, c)));
-        rowPct[r].forEach(p => { if (p > maxPct) maxPct = p; });
-      });
-      const footPct = roundShares(shownCols.map(c => colTotals[c] || 0));
-      if (!maxPct) maxPct = 1;
-
-      if (note) {
-        note.textContent = 'All ' + shownRows.length + ' ' + cfg.rowWord + ' × ' + shownCols.length +
-          ' ' + cfg.colWord + ' · each cell is the row share in percent · ' +
-          'green is low, red is high · ' + grand + ' linked cases';
-      }
-
-      let html = '<thead><tr><th></th>';
-      shownCols.forEach(c => {
-        const on = sel[cfg.colKey] === c ? ' class="hdr-on"' : '';
-        html += '<th data-col="' + escAttr(c) + '"' + on + ' tabindex="0" role="button"' +
-          ' aria-label="Filter by ' + escAttr(c) + '">' + escHtml(c) + '</th>';
-      });
-      html += '<th class="tot">Total</th></tr></thead><tbody>';
-
-      shownRows.forEach(r => {
-        const on = sel[cfg.rowKey] === r ? ' class="hdr-on"' : '';
-        html += '<tr><th data-row="' + escAttr(r) + '"' + on + ' tabindex="0" role="button"' +
-          ' aria-label="Filter by ' + escAttr(r) + '">' + escHtml(r) + '</th>';
-        shownCols.forEach((c, ci) => {
-          const v = cellVal(r, c);
-          const p = rowPct[r][ci];
-          const t = Math.min(1, p / maxPct);
-          const cls = (sel[cfg.rowKey] === r && sel[cfg.colKey] === c) ? ' class="cell-on"' : '';
-          const style = v > 0
-            ? ' style="background:' + heatRgb(t) + ';color:' + (t > 0.85 ? '#FFFFFF' : '#0B1220') + '"'
-            : '';
-          html += '<td data-row="' + escAttr(r) + '" data-col="' + escAttr(c) + '"' + style + cls +
-            ' tabindex="0" role="button"' +
-            ' title="' + escAttr(r + ' · ' + c + ' — ' + v + ' of ' + rowTotals[r] +
-              ' linked cases (' + p + '%)') +
-            ' aria-label="' + escAttr(r + ', ' + c + ': ' + p + ' percent of ' + rowTotals[r] +
-              ' linked cases. Press Enter to cross-filter."') + '">' + p + '%</td>';
-        });
-        html += '<td class="tot">100%</td>';
-      });
-
-      html += '<tr><th class="tot" style="cursor:default">Total</th>';
-      shownCols.forEach((c, ci) => {
-        html += '<td class="tot">' + footPct[ci] + '%</td>';
-      });
-      html += '<td class="tot">100%</td></tr></tbody>';
-
-      table.innerHTML = html;
-      table.onclick = onHeatClick;
-      table.onkeydown = onHeatKey;
-    }
-
     function escHtml(s) {
       return String(s).replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     }
     function escAttr(s) { return escHtml(s).replace(/'/g, '&#39;'); }
 
     // Cell = row + column together; row/column headers = that axis alone.
-    function heatPick(row, col, both) {
-      const cfg = MATRIX_MODES[matrixMode];
-
-      if (row && col && both) {
-        if (sel[cfg.rowKey] === row && sel[cfg.colKey] === col) {
-          sel[cfg.rowKey] = null;
-          sel[cfg.colKey] = null;
-        } else {
-          sel[cfg.rowKey] = row;
-          sel[cfg.colKey] = col;
-        }
-        updateView();
-      } else if (row) {
-        setSel(cfg.rowKey, row);
-      } else if (col) {
-        setSel(cfg.colKey, col);
-      }
-    }
-
-    function onHeatClick(e) {
-      const el = e.target.closest('[data-row],[data-col]');
-      if (!el) return;
-      heatPick(el.dataset.row || null, el.dataset.col || null, el.tagName !== 'TH');
-    }
-
-    // Cells and headers are focusable, so the matrix works without a mouse.
-    function onHeatKey(e) {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      const el = e.target.closest('[data-row],[data-col]');
-      if (!el) return;
-      e.preventDefault();
-      heatPick(el.dataset.row || null, el.dataset.col || null, el.tagName !== 'TH');
-    }
-
-    // ============================================================
     // 4d. Cross-filter selection state
     // ============================================================
     function setSel(key, value) {
