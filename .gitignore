@@ -1,0 +1,10 @@
+dashboard.backup-*.html
+server.log
+server.pid
+check.tmp.js
+*.tmp
+dashboard-open.png
+.freebuff/
+billboard-monitor/
+preview.html
+create_african_man_corporate.py
