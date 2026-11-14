@@ -860,10 +860,25 @@
     #page-tension .chart-card { display: flex; flex-direction: column; }
     #page-tension .chart-card .trend-box { flex: 1 1 auto; min-height: 320px; height: 340px; }
 
-    #page-tension .regime-card { display: flex; flex-direction: column; max-height: 404px; }
+    /* Same height as the chart beside it. The row is given one height, the
+       chart fills it, and the regime card stretches to the same box, so the
+       table scrolls inside the card instead of stretching the row. */
+    @media (min-width: 1100px) {
+      #page-tension .grid-2 { grid-template-rows: 428px; }
+      #page-tension .chart-card .trend-box { height: auto; min-height: 0; }
+      #page-tension .regime-card { height: 100%; }
+    }
+    #page-tension .regime-card {
+      display: flex; flex-direction: column;
+      min-height: 0; max-height: none;
+    }
     #page-tension .regime-card .table-scroll {
       flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: auto; scrollbar-width: thin;
     }
+    /* Collapsed to zones the table is short, so let the rows share the spare
+       height and carry the numbers down to the card's base. Expanded, the rows
+       are taller than the card and the scroll above takes over. */
+    #page-tension .regime-card .tension-table { height: 100%; }
     #page-tension .regime-card thead th { position: sticky; top: 0; z-index: 2; }
     #page-tension .regime-card .tension-table { min-width: 0; }
     #page-tension .regime-card .tension-table th,
