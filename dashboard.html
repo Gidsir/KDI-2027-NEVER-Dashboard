@@ -4249,7 +4249,10 @@
     renderTension();
     loadTensionData();
 
-    Papa.parse(googleSheetCSV, {
+    // A cache-buster per load: the published CSV can otherwise be served from
+    // the browser's cache, which would show a stale row count after the sheet
+    // is edited. The blank parameter is ignored by Google's publisher.
+    Papa.parse(googleSheetCSV + '&_=' + Date.now(), {
       download: true,
       header: true,
       skipEmptyLines: true,
