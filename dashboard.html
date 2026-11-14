@@ -422,6 +422,46 @@
       text-shadow: none;
     }
 
+    /* Hover card for a state. It floats over satellite imagery, so it keeps
+       the dark surface and light ink in both themes; only the accent border
+       follows the palette. */
+    .leaflet-tooltip.state-tip {
+      background: rgba(8, 14, 26, .97); color: #EAF2FA;
+      border: 1px solid rgba(56,189,248,.42); border-radius: 9px;
+      box-shadow: 0 14px 30px -16px rgba(0,0,0,.95);
+      padding: 9px 11px 10px; width: 216px;
+      font-size: 11px; line-height: 1.35; white-space: normal;
+      pointer-events: none;
+    }
+    .leaflet-tooltip.state-tip::before { border-top-color: rgba(56,189,248,.42); }
+    .state-tip .tip-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .state-tip .tip-head b { font-size: 12.5px; font-weight: 800; letter-spacing: -.01em; }
+    .state-tip .tip-band {
+      flex: 0 0 auto; font-size: 8.5px; font-weight: 800;
+      letter-spacing: .07em; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 999px; border: 1px solid currentColor;
+    }
+    .state-tip .tip-stats {
+      display: flex; align-items: baseline; gap: 10px;
+      margin-top: 6px; font-size: 10px; color: #9FB0C7; white-space: nowrap;
+    }
+    .state-tip .tip-stats b { color: #F2F6FC; font-weight: 800; font-size: 12px; }
+    .state-tip .tip-stats small { color: #7D8DA3; font-size: 9px; font-weight: 700; }
+    .state-tip .tip-meter {
+      height: 3px; border-radius: 2px; margin: 6px 0 7px;
+      background: rgba(148,163,184,.24); overflow: hidden;
+    }
+    .state-tip .tip-meter i { display: block; height: 100%; border-radius: 2px; }
+    .state-tip .tip-line { display: flex; align-items: baseline; gap: 7px; margin-top: 3px; }
+    .state-tip .tip-line span {
+      flex: 0 0 46px; color: #7D8DA3; font-size: 8.5px; font-weight: 800;
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .state-tip .tip-line em {
+      color: #EAF2FA; font-style: normal; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+
     /* =====================================================================
        KPI CARDS
        ===================================================================== */
@@ -1661,6 +1701,13 @@
     let stateValueMax = 0;   // largest state count in the current view
     let lgaValueMax = 0;     // largest LGA count, while drilled
 
+    // One reusable hover card for the states; its content is rebuilt on each
+    // mouseover so it always reflects the current filters.
+    const stateTip = L.tooltip({
+      className: 'state-tip', direction: 'top', offset: [0, -10],
+      opacity: 1, interactive: false
+    });
+
     function rampColor(t) {
       t = Math.max(0, Math.min(1, t));
       for (let i = 1; i < RAMP.length; i++) {
@@ -1795,6 +1842,16 @@
               className: 'state-label',
               opacity: 1
             });
+            // Hover detail. A layer holds one Leaflet tooltip and the permanent
+            // label has it, so the card is a standalone tooltip moved about
+            // instead of a second binding.
+            layer.on('mouseover', e => {
+              stateTip.setLatLng(e.latlng).setContent(buildStateTip(f.properties.shapeName)).addTo(map);
+            });
+            layer.on('mousemove', e => stateTip.setLatLng(e.latlng));
+            layer.on('mouseout', () => {
+              if (map.hasLayer(stateTip)) map.removeLayer(stateTip);
+            });
             // Click a state: select it first so every card and chart follows,
             // then drill into its LGAs.
             layer.on('click', () => {
@@ -1830,6 +1887,62 @@
       const cls = incidents > 0 ? 'cnt' : 'cnt zero';
       return '<b>' + displayState(name) + '</b>' +
              '<span class="' + cls + '">' + incidents.toLocaleString() + '</span>';
+    }
+
+    // Hover card. Four short lines: how much happened, how severe that is on
+    // one 0–100 score, then the dominant form, actor and target — the same
+    // "dominant" answers the bar cards give, but for this state alone.
+    const THREAT_BANDS = [
+      { upTo: 20, label: 'Low', color: '#34D399' },
+      { upTo: 45, label: 'Moderate', color: '#FBBF24' },
+      { upTo: 70, label: 'High', color: '#FB8C4A' },
+      { upTo: 100, label: 'Severe', color: '#FB5C77' }
+    ];
+
+    function topKey(box) {
+      if (!box) return null;
+      let best = null, bestN = -1;
+      Object.keys(box).forEach(k => {
+        if (box[k] > bestN) { bestN = box[k]; best = k; }
+      });
+      return best;
+    }
+
+    function buildStateTip(rawName) {
+      const name = canonicalState(rawName);
+      const d = mapData();
+      const inc = d.stateIncidents[name] || 0;
+      const fat = d.stateFatalities[name] || 0;
+
+      if (!inc && !fat) {
+        return '<div class="tip-head"><b>' + escHtml(displayState(name)) + '</b></div>' +
+               '<div class="tip-stats"><span>No records in this view</span></div>';
+      }
+
+      // Half the score from incidents and half from deaths, each against the
+      // worst state currently on the map, so 100 is the top of both scales and
+      // 0 is quiet. It scores the view, not an absolute national scale.
+      const maxInc = Math.max(1, maxOf(d.stateIncidents));
+      const maxFat = Math.max(1, maxOf(d.stateFatalities));
+      const score = Math.round(100 * (0.5 * (inc / maxInc) + 0.5 * (fat / maxFat)));
+      const band = THREAT_BANDS.find(b => score <= b.upTo) || THREAT_BANDS[3];
+
+      const form = topKey(d.stateForms && d.stateForms[name]);
+      const actors = topKey(d.statePerps && d.statePerps[name]);
+      const targets = topKey(d.stateVictims && d.stateVictims[name]);
+
+      return '<div class="tip-head"><b>' + escHtml(displayState(name)) + '</b>' +
+               '<span class="tip-band" style="color:' + band.color + '">' + band.label + '</span>' +
+             '</div>' +
+             '<div class="tip-stats">' +
+               '<span><b>' + inc.toLocaleString() + '</b> incidents</span>' +
+               '<span><b>' + fat.toLocaleString() + '</b> deaths</span>' +
+               '<span>Threat <b>' + score + '</b><small>/100</small></span>' +
+             '</div>' +
+             '<div class="tip-meter"><i style="width:' + score + '%;background:' + band.color + '"></i></div>' +
+             (form ? '<div class="tip-line"><span>Form</span><em>' + escHtml(form) + '</em></div>' : '') +
+             (actors ? '<div class="tip-line"><span>Actors</span><em>' + escHtml(actors) + '</em></div>' : '') +
+             (targets ? '<div class="tip-line"><span>Targets</span><em>' + escHtml(targets) + '</em></div>' : '');
     }
 
     // Restyle the choropleth in place whenever data or the slicer changes.
@@ -2806,6 +2919,11 @@
       target.formCounts = {};
       target.perpCounts = {};
       target.victimCounts = {};
+      // Per state as well as overall, so the map's hover card can name the
+      // dominant form, actor and target without rescanning the rows.
+      target.stateForms = {};
+      target.statePerps = {};
+      target.stateVictims = {};
       target.perpVictim = {};
       target.formPerp = {};
       target.totalIncidents = 0;
@@ -2831,6 +2949,14 @@
         r._forms.forEach(f => countInto(target.formCounts, f));
         r._perps.forEach(p => countInto(target.perpCounts, p));
         r._victims.forEach(v => countInto(target.victimCounts, v));
+
+        const perState = (box, key) => {
+          if (!box[key]) box[key] = {};
+          return box[key];
+        };
+        r._forms.forEach(f => countInto(perState(target.stateForms, r._state), f));
+        r._perps.forEach(p => countInto(perState(target.statePerps, r._state), p));
+        r._victims.forEach(v => countInto(perState(target.stateVictims, r._state), v));
 
         // Cross-tabs for the matrix. Each record contributes at most one link
         // per pair, so a repeated name on one row cannot inflate a cell.
