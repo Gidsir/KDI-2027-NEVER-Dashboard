@@ -2440,6 +2440,19 @@
         onHover: chartCursor,
         plugins: {
           legend: { display: false },
+          // The values are written onto the plot, so they take the line's own
+          // colour and sit clear of it: the lower series labels below its line
+          // and the upper one above. A zero is left blank rather than parked on
+          // the axis, and clamping keeps the first and last inside the frame.
+          datalabels: {
+            display: true,
+            color: ctx => ctx.dataset.borderColor || THEME.text,
+            align: ctx => (ctx.datasetIndex === 0 ? 'bottom' : 'top'),
+            offset: 5,
+            clamp: true,
+            font: { size: 10, weight: '700' },
+            formatter: value => (value ? value : '')
+          },
           tooltip: {
             backgroundColor: THEME.tooltipBg, titleColor: THEME.text, bodyColor: THEME.text,
             borderColor: THEME.grid, borderWidth: 1, padding: 10, cornerRadius: 8,
@@ -2547,7 +2560,7 @@
     }
     function escAttr(s) { return escHtml(s).replace(/'/g, '&#39;'); }
 
-    // Cell = row + column together; row/column headers = that axis alone.
+    // ============================================================
     // 4d. Cross-filter selection state
     // ============================================================
     function setSel(key, value) {
