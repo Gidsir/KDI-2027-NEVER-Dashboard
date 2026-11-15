@@ -1169,10 +1169,7 @@
               <h2 class="card-title">incidents per month</h2>
               <span class="card-hint" id="trend-peak"></span>
             </div>
-            <div class="trend-legend" id="trendLegend">
-              <span data-cat="Electoral Violence"><i style="background:var(--danger)"></i>Electoral</span>
-              <span data-cat="Non-electoral Violence"><i style="background:var(--accent)"></i>Non-electoral</span>
-            </div>
+            <div class="trend-legend" id="trendLegend"></div>
             <div class="trend-box"><canvas id="trendChart"></canvas></div>
           </section>
         </div>
@@ -2639,15 +2636,17 @@
       renderTension();
     }
 
-    // One series per violence category, plotted across calendar months.
-    // Every slicer applies — year and state list included, which this chart
-    // used to skip, so its months now add up to the KPI above it. A category
-    // pick leaves the other line out rather than contradicting the figure.
-    // Chart selections apply too, except the month selection itself.
+    // Monthly plot. With no category picked it compares the two categories by
+    // incidents. With one category picked the comparison changes: that
+    // category's incidents and its fatalities, month by month, which is the
+    // question the filter is really asking. Every slicer applies — year and
+    // state list included — so the months add up to the KPI above them, and
+    // chart selections apply too, except the month selection itself.
     function updateTrendChart() {
       const categories = ['Electoral Violence', 'Non-electoral Violence'];
       const colors = { 'Electoral Violence': THEME.danger, 'Non-electoral Violence': THEME.accent };
-      const buckets = {}; // monthKey -> { date, counts: {cat: n} }
+      const shortName = { 'Electoral Violence': 'Electoral', 'Non-electoral Violence': 'Non-electoral' };
+      const buckets = {}; // monthKey -> { date, inc: {cat: n}, fat: {cat: n} }
 
       rawRows.forEach(r => {
         if (!r._date) return;
@@ -2656,46 +2655,73 @@
 
         const key = r._date.getFullYear() + '-' + String(r._date.getMonth() + 1).padStart(2, '0');
         if (!buckets[key]) {
-          buckets[key] = { date: new Date(r._date.getFullYear(), r._date.getMonth(), 1), counts: {} };
+          buckets[key] = { date: new Date(r._date.getFullYear(), r._date.getMonth(), 1), inc: {}, fat: {} };
         }
         const cat = r._category || 'Unspecified';
-        buckets[key].counts[cat] = (buckets[key].counts[cat] || 0) + 1;
+        buckets[key].inc[cat] = (buckets[key].inc[cat] || 0) + 1;
+        buckets[key].fat[cat] = (buckets[key].fat[cat] || 0) + r._fatalities;
       });
 
       const keys = Object.keys(buckets).sort();
       trendMonthKeys = keys;
+      const labels = keys.map(k => MONTH_FMT.format(buckets[k].date));
+      const series = (cat, field) => keys.map(k => (buckets[k][field][cat] || 0));
+      const monthPoints = () => keys.map(k => (sel.month ? (k === sel.month ? 4 : 0) : 0));
 
-      // Only the categories the current slice actually contains: with a
-      // category picked the other line is gone, not drawn flat at zero.
-      const present = categories.filter(cat => keys.some(k => buckets[k].counts[cat]));
+      // One category picked from the slicer: compare it against its own cost.
+      const picked = categories.indexOf(filters.category) >= 0 ? filters.category : null;
+      let datasets;
 
-      // The hand-built legend hides a series the slicers have emptied out.
-      const legend = document.getElementById('trendLegend');
-      if (legend) {
-        legend.querySelectorAll('[data-cat]').forEach(el => {
-          el.style.display = present.indexOf(el.dataset.cat) >= 0 ? '' : 'none';
-        });
+      if (picked) {
+        datasets = [
+          {
+            label: 'Incidents', legend: 'Incidents', data: series(picked, 'inc'),
+            borderColor: colors[picked], backgroundColor: colors[picked],
+            borderWidth: 2, fill: false, pointRadius: monthPoints(), pointHoverRadius: 5
+          },
+          {
+            // Dashed and amber, with no values written on the plot: the death
+            // line runs at a different magnitude and the digits would collide
+            // with the incident labels. The tooltip carries the numbers.
+            label: 'Fatalities', legend: 'Fatalities', data: series(picked, 'fat'),
+            borderColor: THEME.series[1], backgroundColor: THEME.series[1],
+            borderWidth: 2, borderDash: [5, 4], fill: false,
+            pointRadius: monthPoints(), pointHoverRadius: 5,
+            datalabels: { display: false }
+          }
+        ];
+      } else {
+        // No category picked: only incidents, one line per category, and only
+        // the categories the current slice actually contains.
+        datasets = categories
+          .filter(cat => keys.some(k => buckets[k].inc[cat]))
+          .map(cat => ({
+            label: shortName[cat], legend: shortName[cat], data: series(cat, 'inc'),
+            borderColor: colors[cat], backgroundColor: colors[cat],
+            borderWidth: 2, fill: false, pointRadius: monthPoints(), pointHoverRadius: 5
+          }));
       }
 
-      charts.trend.data.labels = keys.map(k => MONTH_FMT.format(buckets[k].date));
-      charts.trend.data.datasets = present.map(cat => ({
-        label: cat,
-        data: keys.map(k => buckets[k].counts[cat] || 0),
-        borderColor: colors[cat],
-        backgroundColor: colors[cat],
-        borderWidth: 2,
-        fill: false,
-        // Enlarge the selected month, shrink the rest, so the pick is obvious.
-        pointRadius: keys.map(k => (sel.month ? (k === sel.month ? 5 : 0) : 0)),
-        pointHoverRadius: 5
-      }));
+      charts.trend.data.labels = labels;
+      charts.trend.data.datasets = datasets;
+
+      // The legend is hand-built, so it is rebuilt from the series just made.
+      const legend = document.getElementById('trendLegend');
+      if (legend) {
+        legend.innerHTML = datasets.map(d =>
+          '<span><i style="background:' + d.borderColor + '"></i>' + escHtml(d.legend) + '</span>').join('');
+      }
+
       charts.trend.update();
 
+      // The peak always describes incidents, whichever comparison is on screen.
       const peak = document.getElementById('trend-peak');
       if (peak) {
         let best = 0, bestKey = null;
         keys.forEach(k => {
-          const total = categories.reduce((s, c) => s + (buckets[k].counts[c] || 0), 0);
+          const total = picked
+            ? (buckets[k].inc[picked] || 0)
+            : categories.reduce((s, c) => s + (buckets[k].inc[c] || 0), 0);
           if (total > best) { best = total; bestKey = k; }
         });
         peak.textContent = bestKey
