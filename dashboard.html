@@ -1153,9 +1153,9 @@
               <h2 class="card-title">incidents per month</h2>
               <span class="card-hint" id="trend-peak"></span>
             </div>
-            <div class="trend-legend">
-              <span><i style="background:var(--danger)"></i>Electoral</span>
-              <span><i style="background:var(--accent)"></i>Non-electoral</span>
+            <div class="trend-legend" id="trendLegend">
+              <span data-cat="Electoral Violence"><i style="background:var(--danger)"></i>Electoral</span>
+              <span data-cat="Non-electoral Violence"><i style="background:var(--accent)"></i>Non-electoral</span>
             </div>
             <div class="trend-box"><canvas id="trendChart"></canvas></div>
           </section>
@@ -2620,9 +2620,9 @@
     }
 
     // One series per violence category, plotted across calendar months.
-    // The category slicer is deliberately IGNORED here — the chart already
-    // splits by category, so applying it would delete the other line. The
-    // cycle and period slicers ARE applied, since those are plain row filters.
+    // Every slicer applies — year and state list included, which this chart
+    // used to skip, so its months now add up to the KPI above it. A category
+    // pick leaves the other line out rather than contradicting the figure.
     // Chart selections apply too, except the month selection itself.
     function updateTrendChart() {
       const categories = ['Electoral Violence', 'Non-electoral Violence'];
@@ -2631,9 +2631,8 @@
 
       rawRows.forEach(r => {
         if (!r._date) return;
-        if (filters.cycle !== 'all' && r._cycle !== filters.cycle) return;
-        if (filters.period !== 'all' && r._period !== filters.period) return;
-        if (!matchesSel(r, ['month'])) return;
+        if (!matchesFilters(r)) return;          // category, cycle, period, year, states
+        if (!matchesSel(r, ['month'])) return;   // every chart pick but its own month
 
         const key = r._date.getFullYear() + '-' + String(r._date.getMonth() + 1).padStart(2, '0');
         if (!buckets[key]) {
@@ -2646,8 +2645,20 @@
       const keys = Object.keys(buckets).sort();
       trendMonthKeys = keys;
 
+      // Only the categories the current slice actually contains: with a
+      // category picked the other line is gone, not drawn flat at zero.
+      const present = categories.filter(cat => keys.some(k => buckets[k].counts[cat]));
+
+      // The hand-built legend hides a series the slicers have emptied out.
+      const legend = document.getElementById('trendLegend');
+      if (legend) {
+        legend.querySelectorAll('[data-cat]').forEach(el => {
+          el.style.display = present.indexOf(el.dataset.cat) >= 0 ? '' : 'none';
+        });
+      }
+
       charts.trend.data.labels = keys.map(k => MONTH_FMT.format(buckets[k].date));
-      charts.trend.data.datasets = categories.map(cat => ({
+      charts.trend.data.datasets = present.map(cat => ({
         label: cat,
         data: keys.map(k => buckets[k].counts[cat] || 0),
         borderColor: colors[cat],
@@ -2849,7 +2860,11 @@
 
       const count = document.getElementById('slicer-count');
       if (count) {
-        count.textContent = 'Showing ' + live.totalIncidents.toLocaleString() +
+        // A chart pick narrows every card, so the running count follows the
+        // view rather than the slicer-only total it used to repeat.
+        const picked = Object.keys(sel).some(k => sel[k]);
+        const shown = picked && view ? view.totalIncidents : live.totalIncidents;
+        count.textContent = 'Showing ' + shown.toLocaleString() +
           ' of ' + rawRows.length.toLocaleString() + ' records';
       }
     }
@@ -3244,9 +3259,28 @@
     // ============================================================
     // 7. Load the published sheet and push it through every view
     // ============================================================
+    // One row per report, keyed on the sheet's Report ID. Today the IDs are
+    // already unique, but a re-coded incident can arrive twice, and counting
+    // rows would then double it in every card, chart and map. A row with no ID
+    // is kept, since there is nothing to match it against.
+    function byReportId(rows) {
+      const seen = new Set();
+      let dropped = 0;
+      const kept = rows.filter(r => {
+        const id = String(r['Report ID'] || '').trim();
+        if (!id) return true;
+        if (seen.has(id)) { dropped++; return false; }
+        seen.add(id);
+        return true;
+      });
+      if (dropped) console.warn('Dropped ' + dropped + ' duplicate Report ID rows');
+      return kept;
+    }
+
     function ingest(rows) {
       // Normalise once so re-aggregating on slicer change is cheap.
       // Derived measures are computed here, exactly as DAX would on refresh.
+      rows = byReportId(rows);
       Object.keys(periodCounts).forEach(k => delete periodCounts[k]);
       Object.keys(periodCountsByCycle).forEach(k => delete periodCountsByCycle[k]);
       Object.keys(yearCounts).forEach(k => delete yearCounts[k]);
@@ -3273,6 +3307,7 @@
         const state = canonicalState(rawState);
 
         return {
+          _id: String(r['Report ID'] || '').trim(),
           _state: state,
           // Key into live.lgaIncidents: NORMALISED_STATE|NORMALISED_BOUNDARY_LGA.
           // Resolves sheet spellings via LGA_ALIASES; null when the cell is
@@ -3650,7 +3685,7 @@
     }
 
     function ingestTension(rows) {
-      tensionRows = rows.map(r => {
+      tensionRows = byReportId(rows).map(r => {
         const rawState = String(r.State || '').trim();
         const state = canonicalState(TENSION_STATE_ALIASES[rawState] || rawState);
         const date = parseSheetDate(r.Date);
@@ -3658,6 +3693,7 @@
         const stateUpper = rawState.toUpperCase();
 
         return {
+          _id: String(r['Report ID'] || '').trim(),
           _state: state,
           _lgaKey: lgaKeyFor(state, r.LGA),
           _lgaName: String(r.LGA || '').trim(),
@@ -4061,7 +4097,9 @@
         note.textContent = Object.keys(units).length + ' ' + unitWord + ' in this selection. ' +
           'A cell counts incidents of that violence form recorded in ' + unitWord +
           ' that also reported the threat form. The badge beside a row is how many ' +
-          unitSingular + 's reported it, and the last column totals the violence forms shown. ' +
+          unitSingular + 's reported it, and the last column totals the violence forms shown, ' +
+          'counting an incident once per form it carries — so a row total can exceed the ' +
+          'number of incidents on record. ' +
           'A ' + unitSingular + ' reporting several threat forms appears in ' +
           'several rows, so cells overlap and do not sum. Columns show the ten most widespread ' +
           'violence forms' +
