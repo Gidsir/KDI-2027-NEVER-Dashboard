@@ -910,6 +910,15 @@
       color: var(--text); border-radius: 4px; min-width: 34px;
     }
     .matrix-table td.m-zero { color: var(--text-3); background: transparent; }
+    /* Every cell, row and column header is a cross-filter button. */
+    .matrix-table thead th:not(.m-corner):not(.m-total),
+    .matrix-table th.m-row,
+    .matrix-table td.m-cell { cursor: pointer; }
+    .matrix-table thead th:not(.m-total):hover,
+    .matrix-table th.m-row:hover { color: var(--text); }
+    .matrix-table td.m-cell:hover { outline: 2px solid rgba(56,189,248,.55); outline-offset: -2px; }
+    .matrix-table .is-on { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .matrix-table thead th.is-on { color: var(--accent); }
     .matrix-table th.m-total, .matrix-table td.m-total {
       color: var(--text-3); font-weight: 800; font-variant-numeric: tabular-nums;
     }
@@ -1561,7 +1570,8 @@
       form: null,    // form of violence       (matrix row / forms chart)
       perp: null,    // perpetrator category   (perpetrator charts)
       victim: null,  // victim category        (victims chart)
-      month: null    // 'YYYY-MM'              (trend chart point)
+      month: null,   // 'YYYY-MM'              (trend chart point)
+      threat: null   // form of threat          (tension sheet / matrix rows)
     };
 
     // Cross-filtered aggregates: cards and charts read from here.
@@ -2717,6 +2727,7 @@
       if (sel.perp) out.push(['perp', 'Perpetrator · ' + sel.perp]);
       if (sel.victim) out.push(['victim', 'Victim · ' + sel.victim]);
       if (sel.month) out.push(['month', 'Month · ' + monthLabelOf(sel.month)]);
+      if (sel.threat) out.push(['threat', 'Threat · ' + sel.threat]);
       return out;
     }
 
@@ -3727,8 +3738,12 @@
     function renderTension() {
       if (!document.getElementById('page-tension')) return;
 
-      const tRows = tensionRows.filter(tensionMatchesFilters);
-      const vRows = rawRows.filter(matchesFilters);
+      // The page narrows on the matrix's own picks, while the matrix itself is
+      // drawn from the unpicked rows so its rows and columns stay whole.
+      const tBase = tensionRows.filter(tensionMatchesFilters);
+      const vBase = rawRows.filter(matchesFilters);
+      const tRows = sel.threat ? tBase.filter(r => r._forms.indexOf(sel.threat) >= 0) : tBase;
+      const vRows = sel.form ? vBase.filter(r => r._forms.indexOf(sel.form) >= 0) : vBase;
       const put = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
       // --- headline numbers -------------------------------------
@@ -3855,7 +3870,7 @@
       }
 
       updateRegimeExpandLabel();
-      renderMatrix(tRows, vRows);
+      renderMatrix(tBase, vBase);
 
       // --- forms, targets, perpetrators --------------------------
       const formCounts = {}, targetCounts = {}, perpCounts = {};
@@ -4071,7 +4086,9 @@
       });
 
       head.innerHTML = '<tr><th class="m-corner">Threat form ↓</th>' +
-        cols.map(c => '<th title="' + escAttr(c + ' — ' + colTotals[c] + ' incidents overall') + '">' +
+        cols.map(c => '<th data-form="' + escAttr(c) + '" tabindex="0" role="button"' +
+          (sel.form === c ? ' class="is-on"' : '') +
+          ' title="' + escAttr('Filter the violence figures by ' + c + ' — ' + colTotals[c] + ' incidents overall') + '">' +
           escHtml(c) + '</th>').join('') +
         '<th class="m-total" title="Sum of the violence forms shown; one incident can carry several forms">Total</th></tr>';
 
@@ -4082,16 +4099,51 @@
           const style = n
             ? ' style="background:color-mix(in srgb, var(--accent) ' + pct + '%, transparent)"'
             : '';
-          return '<td class="m-cell' + (n ? '' : ' m-zero') + '"' + style +
+          const on = sel.threat === f && sel.form === c ? ' is-on' : '';
+          return '<td class="m-cell' + (n ? '' : ' m-zero') + on + '"' + style +
+            ' data-cell="1" data-threat="' + escAttr(f) + '" data-form="' + escAttr(c) + '"' +
+            ' tabindex="0" role="button"' +
             ' title="' + escAttr(n + ' ' + c + ' incident' + (n === 1 ? '' : 's') + ' in the ' +
-              rowUnits[f] + ' ' + unitWord + ' reporting ' + f) + '">' +
+              rowUnits[f] + ' ' + unitWord + ' reporting ' + f + ' — click to filter') + '">' +
             (n || '·') + '</td>';
         }).join('');
 
-        return '<tr><th class="m-row" scope="row">' + escHtml(f) +
+        return '<tr><th class="m-row' + (sel.threat === f ? ' is-on' : '') + '" scope="row"' +
+          ' data-threat="' + escAttr(f) + '" tabindex="0" role="button"' +
+          ' title="' + escAttr('Filter the threat figures by ' + f) + '">' + escHtml(f) +
           '<span class="matrix-units">' + rowUnits[f] + '</span></th>' + tds +
           '<td class="m-total">' + rowTotals[f].toLocaleString() + '</td></tr>';
       }).join('');
+
+      // Cells and headers cross-filter: a column picks its violence form, a row
+      // its threat form, a cell both. The matrix keeps every row and column so
+      // the pick can be compared and changed without losing the context.
+      const table = document.getElementById('matrixTable');
+      if (table) {
+        const pick = (threat, form) => {
+          if (threat && form && sel.threat === threat && sel.form === form) {
+            sel.threat = null; sel.form = null;          // same cell twice clears
+          } else {
+            if (threat) sel.threat = sel.threat === threat ? null : threat;
+            if (form) sel.form = sel.form === form ? null : form;
+          }
+          updateView();
+        };
+        table.onclick = e => {
+          const cell = e.target.closest('[data-cell]');
+          if (cell) { pick(cell.dataset.threat, cell.dataset.form); return; }
+          const col = e.target.closest('[data-form]');
+          if (col) { pick(null, col.dataset.form); return; }
+          const row = e.target.closest('[data-threat]');
+          if (row) pick(row.dataset.threat, null);
+        };
+        table.onkeydown = e => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          if (!e.target.closest('[data-threat],[data-form]')) return;
+          e.preventDefault();
+          table.onclick(e);
+        };
+      }
 
       if (note) {
         note.textContent = Object.keys(units).length + ' ' + unitWord + ' in this selection. ' +
@@ -4105,7 +4157,9 @@
           'violence forms' +
           (allCols.length > 10 ? ', with ' + (allCols.length - 10) + ' left out' : '') + '. ' +
           'A threat form reported in every ' + unitSingular + ' has a row equal to the overall ' +
-          'totals, so it tells you where it is absent from nothing — switch level for contrast.';
+          'totals, so it tells you where it is absent from nothing — switch level for contrast. ' +
+          'Click a row to narrow the threat figures, a column to narrow the violence figures, ' +
+          'or a cell for both; the same pick again clears it.';
       }
     }
 
