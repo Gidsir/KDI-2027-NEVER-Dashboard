@@ -653,6 +653,17 @@
        RANKED BAR LISTS
        ===================================================================== */
     .bar-rows { display: flex; flex-direction: column; gap: 1px; }
+
+    /* A card of ranked bars always fills its box: the rows share whatever
+       height is left, so a short list (or a list cut down by a cross-filter)
+       still runs from the header to the card's base instead of stopping
+       halfway. */
+    .grid-3 > .card,
+    .tension-three > .card { display: flex; flex-direction: column; }
+    .grid-3 > .card > .bar-rows,
+    .tension-three > .card > .bar-rows {
+      flex: 1 1 auto; min-height: 0; justify-content: space-between; gap: 0;
+    }
     .bar-row {
       display: grid; grid-template-columns: minmax(70px, 42%) 1fr auto;
       align-items: center; gap: 10px; width: 100%;
