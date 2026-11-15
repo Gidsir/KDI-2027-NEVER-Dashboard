@@ -3361,7 +3361,10 @@
       buildPeriodOptions();
       buildYearOptions();
       syncStateSlicer();
-      renderStateOptions('');
+      // Keep whatever is typed in the state search while a refresh re-renders
+      // the list underneath it.
+      const stateSearch = document.getElementById('state-search');
+      renderStateOptions(stateSearch ? stateSearch.value : '');
       aggregate();
 
       console.log('Loaded live records from Google Sheets:', rawRows.length);
@@ -4222,7 +4225,7 @@
       }
     }
 
-    function loadTensionData() {
+    function loadTensionData(done) {
       fetch(tensionSheetCSV, { cache: 'no-store' })
         .then(res => {
           if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -4242,37 +4245,75 @@
             el.textContent = '⚠ tension data unavailable';
             el.title = 'Reload once the tension sheet is reachable again.';
           }
-        });
+        })
+        .finally(() => { if (done) done(); });
+    }
+
+    // A cache-buster per load: the published CSV can otherwise be served from
+    // the browser's cache, which would show a stale row count after the sheet
+    // is edited. The blank parameter is ignored by Google's publisher.
+    function loadViolenceData(done) {
+      Papa.parse(googleSheetCSV + '&_=' + Date.now(), {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function (results) {
+          const rows = (results.data || []).filter(r => r && (r['Report ID'] || r.State));
+          if (!rows.length) {
+            console.warn('The published sheet returned no rows.');
+          } else {
+            try {
+              ingest(rows);
+            } catch (err) {
+              console.error('Failed to aggregate sheet rows:', err);
+            }
+          }
+          if (done) done();
+        },
+        error: function (err) {
+          console.error('Could not download the published sheet:', err);
+          if (done) done();
+        }
+      });
+    }
+
+    // ---- auto refresh -------------------------------------------------
+    // The sheets are the source of truth, so an open tab re-reads both of them
+    // every two minutes and whenever it comes back into view. Nothing here
+    // needs a redeploy; a background tab is left alone, and the guard stops a
+    // slow read from stacking another on top of it.
+    const REFRESH_MS = 120000;
+    const REFRESH_QUIET_MS = 15000;   // ignore focus/visibility churn just after a read
+    let refreshing = false;
+    let lastRefreshAt = 0;
+
+    function refreshLiveData() {
+      if (refreshing || document.visibilityState === 'hidden') return;
+      refreshing = true;
+      lastRefreshAt = Date.now();
+      let pending = 2;
+      const done = () => { if (--pending <= 0) refreshing = false; };
+      loadTensionData(done);
+      loadViolenceData(done);
+    }
+
+    function refreshIfStale() {
+      if (Date.now() - lastRefreshAt < REFRESH_QUIET_MS) return;
+      refreshLiveData();
     }
 
     bindSignalSort();
     renderSignalsTable();
     renderTension();
     loadTensionData();
+    loadViolenceData(() => { lastRefreshAt = Date.now(); });
+    lastRefreshAt = Date.now();
 
-    // A cache-buster per load: the published CSV can otherwise be served from
-    // the browser's cache, which would show a stale row count after the sheet
-    // is edited. The blank parameter is ignored by Google's publisher.
-    Papa.parse(googleSheetCSV + '&_=' + Date.now(), {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: function (results) {
-        const rows = (results.data || []).filter(r => r && (r['Report ID'] || r.State));
-        if (!rows.length) {
-          console.warn('The published sheet returned no rows.');
-          return;
-        }
-        try {
-          ingest(rows);
-        } catch (err) {
-          console.error('Failed to aggregate sheet rows:', err);
-        }
-      },
-      error: function (err) {
-        console.error('Could not download the published sheet:', err);
-      }
+    window.setInterval(refreshLiveData, REFRESH_MS);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshIfStale();
     });
+    window.addEventListener('focus', refreshIfStale);
     </script>
 </body>
 </html>
