@@ -353,6 +353,10 @@
     .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
     @media (min-width: 1100px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
 
+    /* Three equal lists: forms, perpetrators, victims. */
+    .grid-3 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 1180px) { .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
     /* =====================================================================
        MAP (container only — the Leaflet setup is untouched)
        ===================================================================== */
@@ -1181,7 +1185,7 @@
     <div class="wrap page-inner">
       <div id="kpi-slot-threats"></div>
 
-      <div class="grid-2">
+      <div class="grid-3">
         <section class="card">
           <div class="card-head">
             <h2 class="card-title">Forms of violence recorded</h2>
@@ -1196,6 +1200,14 @@
             <span class="card-hint">Click a row to cross-filter</span>
           </div>
           <div class="bar-rows" id="perpsRows"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Victim categories</h2>
+            <span class="card-hint">Click a row to cross-filter</span>
+          </div>
+          <div class="bar-rows" id="victimsRows"></div>
         </section>
       </div>
     </div>
@@ -2544,6 +2556,11 @@
       barRows(document.getElementById('perpsRows'),
         perps.map(([k, v]) => ({ key: k, label: k, value: v, selected: sel.perp === k })),
         { onPick: k => setSel('perp', k), hasSelection: !!sel.perp });
+
+      const victims = topEntries(aggOf(['victim']).victimCounts, 9);
+      barRows(document.getElementById('victimsRows'),
+        victims.map(([k, v]) => ({ key: k, label: k, value: v, selected: sel.victim === k })),
+        { onPick: k => setSel('victim', k), hasSelection: !!sel.victim });
     }
 
     // ============================================================
