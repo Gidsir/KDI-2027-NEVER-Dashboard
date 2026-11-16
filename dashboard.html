@@ -241,7 +241,7 @@
     .slicer-select option { background: var(--surface); color: var(--text); }
 
     /* Multi-select state slicer */
-    .field-states { position: relative; }
+    .field-states, .field-periods { position: relative; }
     .state-select {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
       text-align: left; background-image: none;
@@ -1005,9 +1005,24 @@
           </select>
         </div>
 
-        <div class="field">
-          <label for="slicer-period">Election period</label>
-          <select id="slicer-period" class="slicer-select" onchange="setFilter('period', this.value)"></select>
+        <div class="field field-periods">
+          <label for="period-slicer-btn">Election period</label>
+          <button type="button" id="period-slicer-btn" class="slicer-select state-select"
+                  aria-haspopup="true" aria-expanded="false" onclick="togglePeriodSlicer()">
+            <span id="period-slicer-label">All periods</span>
+            <svg class="chev" width="10" height="6" viewBox="0 0 10 6" fill="none"
+                 stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M1 1l4 4 4-4"></path>
+            </svg>
+          </button>
+          <div class="state-panel hidden" id="period-panel">
+            <div class="state-list" id="period-list"></div>
+            <div class="state-foot">
+              <button type="button" class="link-btn" onclick="selectAllPeriods()">All</button>
+              <span class="muted" id="period-sel-count"></span>
+              <button type="button" class="link-btn" onclick="clearPeriodSlicer()">Clear</button>
+            </div>
+          </div>
         </div>
 
         <div class="field">
@@ -1534,7 +1549,7 @@
     const filters = {            // slicer selections, combined with AND
       category: 'all',
       cycle: 'all',
-      period: 'all',
+      periods: null,             // multi-select periods; null = every period
       year: 'all',               // calendar year of the incident date
       states: []                 // multi-select state slicer; empty = all states
     };
@@ -2971,7 +2986,11 @@
       const out = [];
       if (filters.category !== 'all') out.push(filters.category);
       if (filters.cycle !== 'all') out.push(filters.cycle);
-      if (filters.period !== 'all') out.push(filters.period);
+      if (filters.periods) {
+        out.push(filters.periods.length <= 2
+          ? filters.periods.join(', ')
+          : filters.periods.length + ' periods');
+      }
       if (filters.year !== 'all') out.push(filters.year);
       if (filters.states.length) {
         out.push(filters.states.length <= 2
@@ -2989,7 +3008,7 @@
     function matchesFilters(r) {
       if (filters.category !== 'all' && r._category !== filters.category) return false;
       if (filters.cycle !== 'all' && r._cycle !== filters.cycle) return false;
-      if (filters.period !== 'all' && r._period !== filters.period) return false;
+      if (!periodSelected(r._period)) return false;
       // A year pick only matches rows that carry a date in that year; undated
       // rows drop out rather than being guessed into one.
       if (filters.year !== 'all') {
@@ -3144,9 +3163,9 @@
       if (ctl && ctl.value !== value) ctl.value = value;
 
       // The period list is drawn from the chosen cycle, so it is rebuilt
-      // whenever the cycle changes (and may reset a period that no longer
+      // whenever the cycle changes (and may drop a period that no longer
       // exists under the new cycle).
-      if (key === 'cycle') buildPeriodOptions();
+      if (key === 'cycle') { renderPeriodOptions(); syncPeriodSlicer(); }
 
       if (rawRows.length) aggregate();
 
@@ -3201,7 +3220,7 @@
       rawRows.forEach(r => {
         if (filters.category !== 'all' && r._category !== filters.category) return;
         if (filters.cycle !== 'all' && r._cycle !== filters.cycle) return;
-        if (filters.period !== 'all' && r._period !== filters.period) return;
+        if (!periodSelected(r._period)) return;
         counts[r._state] = (counts[r._state] || 0) + 1;
       });
       return counts;
@@ -3294,6 +3313,8 @@
     document.addEventListener('click', e => {
       const field = document.querySelector('.field-states');
       if (field && !field.contains(e.target)) closeStateSlicer();
+      const periodField = document.querySelector('.field-periods');
+      if (periodField && !periodField.contains(e.target)) closePeriodSlicer();
     });
 
     // Year dropdown, newest first, from the years the sheet actually has. A
@@ -3323,38 +3344,155 @@
       selEl.value = filters.year;
     }
 
-    // Rebuild the Election Period dropdown from the periods actually present
-    // in the data, in a stable election-cycle order.
-    function buildPeriodOptions() {
-      const selEl = document.getElementById('slicer-period');
-      if (!selEl) return;
+    // ------------------------------------------------------------------
+    // Election period — checkboxes, multi-select
+    // ------------------------------------------------------------------
+    // `filters.periods` is the list of periods in play; null means every
+    // period the data has, which is how the dashboard opens. Unticking one
+    // from that state materialises the full list first, so the other periods
+    // stay selected rather than collapsing to nothing.
+    function periodSelected(period) {
+      return !filters.periods || filters.periods.indexOf(period) >= 0;
+    }
 
-      // The period list follows the chosen cycle, so pairings that cannot
-      // exist (a general election counted inside Osun's pre-election window)
-      // are never offered.
-      const counts = filters.cycle === 'all'
+    // The list follows the chosen cycle, so pairings that cannot exist (a
+    // general election counted inside Osun's pre-election window) are never
+    // offered.
+    function periodCountsFor() {
+      return filters.cycle === 'all'
         ? periodCounts
         : (periodCountsByCycle[filters.cycle] || {});
-      const present = PERIOD_ORDER.filter(p => counts[p]);
+    }
 
-      // A period the new cycle does not contain falls back to "all".
-      if (filters.period !== 'all' && !counts[filters.period]) filters.period = 'all';
+    function presentPeriods() {
+      const counts = periodCountsFor();
+      return PERIOD_ORDER.filter(p => counts[p]);
+    }
 
-      selEl.innerHTML = '';
+    function syncPeriodSlicer() {
+      const list = presentPeriods();
+      const picked = filters.periods;
 
-      const all = document.createElement('option');
-      all.value = 'all';
-      all.textContent = 'All periods';
-      selEl.appendChild(all);
+      const label = document.getElementById('period-slicer-label');
+      if (label) {
+        label.textContent = !picked
+          ? 'All periods'
+          : picked.length === 1
+            ? picked[0]
+            : picked.length + ' of ' + list.length + ' periods';
+      }
 
-      present.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p + ' (' + counts[p].toLocaleString() + ')';
-        selEl.appendChild(opt);
-      });
+      const btn = document.getElementById('period-slicer-btn');
+      if (btn) {
+        btn.classList.toggle('is-active', !!picked);
+        btn.title = picked ? picked.join(', ') : '';
+      }
 
-      selEl.value = filters.period;
+      const count = document.getElementById('period-sel-count');
+      if (count) {
+        count.textContent = picked
+          ? picked.length + ' of ' + list.length + ' selected'
+          : '';
+      }
+    }
+
+    function renderPeriodOptions() {
+      const host = document.getElementById('period-list');
+      if (!host) return;
+
+      const counts = periodCountsFor();
+      const list = presentPeriods();
+
+      // A picked period the current cycle does not contain is dropped. Two
+      // outcomes collapse back to "all": a selection that still covers every
+      // period (so one arriving later is included without being ticked by
+      // hand), and a selection the cycle change emptied completely — switching
+      // cycle must not blank the dashboard. An empty list the user made with
+      // Clear is deliberate and left alone.
+      if (filters.periods) {
+        const kept = filters.periods.filter(p => list.indexOf(p) >= 0);
+        if (kept.length === list.length) filters.periods = null;
+        else if (!kept.length && filters.periods.length) filters.periods = null;
+        else filters.periods = kept;
+      }
+
+      if (!list.length) {
+        host.innerHTML = '<p class="state-empty">No periods in this cycle.</p>';
+        return;
+      }
+
+      host.innerHTML = list.map(p => {
+        const on = periodSelected(p);
+        return '<label class="state-opt">' +
+          '<input type="checkbox" value="' + escAttr(p) + '"' + (on ? ' checked' : '') + '>' +
+          '<span>' + escHtml(p) + '</span>' +
+          '<span class="n">' + counts[p].toLocaleString() + '</span>' +
+        '</label>';
+      }).join('');
+
+      host.onchange = e => {
+        const box = e.target.closest('input[type="checkbox"]');
+        if (box) setPeriodChecked(box.value, box.checked);
+      };
+    }
+
+    function setPeriodChecked(period, on) {
+      const list = presentPeriods();
+      const picked = filters.periods ? filters.periods.slice() : list.slice();
+      const i = picked.indexOf(period);
+      if (on && i < 0) picked.push(period);
+      else if (!on && i >= 0) picked.splice(i, 1);
+
+      filters.periods = picked.length === list.length ? null : picked;
+
+      // The figures beside each period count rows under the other slicers, so
+      // they cannot move when a period is ticked. Only the ticks and the label
+      // are refreshed: re-rendering the list would also reset its scroll
+      // position under the pointer.
+      const host = document.getElementById('period-list');
+      if (host) {
+        host.querySelectorAll('input[type="checkbox"]').forEach(b => {
+          b.checked = periodSelected(b.value);
+        });
+      }
+      syncPeriodSlicer();
+      if (rawRows.length) aggregate();
+    }
+
+    function togglePeriodSlicer() {
+      const panel = document.getElementById('period-panel');
+      const btn = document.getElementById('period-slicer-btn');
+      if (!panel || !btn) return;
+
+      const open = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !open);
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) { renderPeriodOptions(); syncPeriodSlicer(); }
+    }
+
+    function closePeriodSlicer() {
+      const panel = document.getElementById('period-panel');
+      const btn = document.getElementById('period-slicer-btn');
+      if (panel && !panel.classList.contains('hidden')) {
+        panel.classList.add('hidden');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function selectAllPeriods() {
+      filters.periods = null;
+      renderPeriodOptions();
+      syncPeriodSlicer();
+      if (rawRows.length) aggregate();
+    }
+
+    // Clearing ticks nothing: every card reads zero until a period is ticked
+    // again, which is what "none selected" means on a checkbox slicer.
+    function clearPeriodSlicer() {
+      filters.periods = [];
+      renderPeriodOptions();
+      syncPeriodSlicer();
+      if (rawRows.length) aggregate();
     }
 
     // ============================================================
@@ -3438,7 +3576,8 @@
         .sort((a, b) => displayState(a).localeCompare(displayState(b)));
       filters.states = filters.states.filter(s => ALL_STATES.indexOf(s) >= 0);
 
-      buildPeriodOptions();
+      renderPeriodOptions();
+      syncPeriodSlicer();
       buildYearOptions();
       syncStateSlicer();
       // Keep whatever is typed in the state search while a refresh re-renders
@@ -3820,7 +3959,7 @@
     function tensionMatchesFilters(r) {
       if (filters.category !== 'all' && r._category !== filters.category) return false;
       if (filters.cycle !== 'all' && r._cycle !== filters.cycle) return false;
-      if (filters.period !== 'all' && r._period !== filters.period) return false;
+      if (!periodSelected(r._period)) return false;
       if (filters.year !== 'all' && (!r._date || String(r._date.getFullYear()) !== filters.year)) return false;
       if (filters.states.length && filters.states.indexOf(r._state) < 0) return false;
       return true;
