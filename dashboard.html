@@ -399,7 +399,13 @@
       text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.85);
     }
     .leaflet-tooltip.state-label { font-size: 10px; }
-    .leaflet-tooltip.lga-label { font-size: 9px; }
+    /* Districts tile the map tightly, so a bare name sits on top of the
+       boundary lines and reads as part of the clutter. A faint plate gives
+       each name its own space without hiding the polygon under it. */
+    .leaflet-tooltip.lga-label {
+      font-size: 9px; padding: 1px 4px; border-radius: 4px;
+      background: rgba(8, 14, 26, .6);
+    }
     .leaflet-tooltip.state-label::before,
     .leaflet-tooltip.lga-label::before { display: none; }
     /* The count reads as a second line of the name: same colour, same size. */
@@ -412,7 +418,8 @@
       border-radius: 6px; padding: 3px 7px;
     }
     .leaflet-container .state-shape { cursor: pointer; }
-    .leaflet-container .lga-shape { cursor: default; }
+    .leaflet-container .lga-shape { cursor: pointer; }
+    .leaflet-tooltip.lga-tip { width: 200px; }
 
     /* Satellite imagery is dark in both themes, so the labels are white in
        both — stated explicitly rather than inherited, so nothing in the light
@@ -1535,6 +1542,7 @@
       stateIncidents: {},
       stateFatalities: {},
       lgaIncidents: {},
+      lgaFatalities: {},
       districtIncidents: {},
       formCounts: {},
       perpCounts: {},
@@ -1999,8 +2007,56 @@
       return rampColor(d / (lgaValueMax || 1));
     }
 
+    // An LGA with no records used to be filled #1E293B, which is close to the
+    // map's own background: the state then read as a scatter of white hair-
+    // lines rather than a set of districts. It now gets a dim slate plate at
+    // low opacity, so the tiling is visible and the data still stands out.
     function lgaStyle(count) {
-      return { fillColor: getLgaColor(count), weight: 0.8, color: '#FFFFFF', fillOpacity: 0.66 };
+      const has = count > 0;
+      return {
+        fillColor: has ? getLgaColor(count) : '#465A75',
+        fillOpacity: has ? 0.8 : 0.5,
+        weight: has ? 0.9 : 0.6,
+        color: has ? 'rgba(255,255,255,.55)' : 'rgba(203,213,225,.32)'
+      };
+    }
+
+    // Hover detail for an LGA. The state map's card is a standalone tooltip
+    // rather than a second binding, because a layer holds only one Leaflet
+    // tooltip and the permanent label already owns it.
+    const lgaTip = L.tooltip({
+      className: 'state-tip lga-tip', direction: 'top', offset: [0, -10],
+      opacity: 1, interactive: false
+    });
+
+    function buildLgaTip(state, shapeName) {
+      const d = mapData();
+      const key = normKey(state) + '|' + normKey(shapeName);
+      const inc = d.lgaIncidents[key] || 0;
+      const fat = (d.lgaFatalities && d.lgaFatalities[key]) || 0;
+      const stateInc = d.stateIncidents[state] || 0;
+
+      if (!inc && !fat) {
+        return '<div class="tip-head"><b>' + escHtml(shapeName) + '</b>' +
+                 '<span class="tip-band" style="color:var(--text-3)">LGA</span>' +
+               '</div>' +
+               '<div class="tip-stats"><span>No records in this view</span></div>';
+      }
+
+      // How much of the state's violence this district carries, which is the
+      // comparison that means something once only one state is on the map.
+      const share = stateInc ? Math.round(100 * inc / stateInc) : 0;
+      const plural = (n, one, many) => (n === 1 ? one : many);
+
+      return '<div class="tip-head"><b>' + escHtml(shapeName) + '</b>' +
+               '<span class="tip-band" style="color:var(--accent)">LGA</span>' +
+             '</div>' +
+             '<div class="tip-stats">' +
+               '<span><b>' + inc.toLocaleString() + '</b> ' + plural(inc, 'incident', 'incidents') + '</span>' +
+               '<span><b>' + fat.toLocaleString() + '</b> ' + plural(fat, 'death', 'deaths') + '</span>' +
+               '<span><b>' + share + '</b><small>% of state</small></span>' +
+             '</div>' +
+             '<div class="tip-meter"><i style="width:' + share + '%;background:var(--accent)"></i></div>';
     }
 
     // Boundary LGA name -> its count under the current slicers.
@@ -2024,6 +2080,11 @@
       // the tooltip pane, so without this every rebind leaks an element —
       // which showed up as duplicate labels and phantom overlaps.
       if (oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+
+      // Only the permanent label binds. Hover is served by the shared card,
+      // so a district that keeps a label and one that does not both answer a
+      // hover the same way.
+      if (!permanent) return;
 
       layer.bindTooltip(buildLgaLabel(state, shapeName), {
         permanent: !!permanent,
@@ -2275,6 +2336,7 @@
           if (geoLayer && map.hasLayer(geoLayer)) map.removeLayer(geoLayer);
           if (lgaLayer) { map.removeLayer(lgaLayer); lgaLayer = null; }
           if (lgaOutline) { map.removeLayer(lgaOutline); lgaOutline = null; }
+          if (map.hasLayer(lgaTip)) map.removeLayer(lgaTip);
 
           drilledState = state;
           // The LGA ramp spans this state's largest district count, so it is
@@ -2287,6 +2349,20 @@
             onEachFeature: (f, layer) => {
               // Placed properly by layoutLgaLabels() once on the map.
               bindLgaTooltip(layer, state, f.properties.shapeName, false);
+
+              // Every district answers a hover, labelled or not: the card is a
+              // standalone tooltip that follows the pointer, and the shape
+              // outlines itself so it is obvious which one is being read.
+              const name = f.properties.shapeName;
+              layer.on('mouseover', e => {
+                lgaTip.setLatLng(e.latlng).setContent(buildLgaTip(state, name)).addTo(map);
+                layer.setStyle({ weight: 2.2, color: '#38BDF8' });
+              });
+              layer.on('mousemove', e => lgaTip.setLatLng(e.latlng));
+              layer.on('mouseout', () => {
+                if (map.hasLayer(lgaTip)) map.removeLayer(lgaTip);
+                layer.setStyle(lgaStyle(lgaCount(state, name)));
+              });
             }
           }).addTo(map);
           setLegendMax(lgaValueMax);
@@ -2329,6 +2405,7 @@
 
       if (lgaLayer) { map.removeLayer(lgaLayer); lgaLayer = null; }
       if (lgaOutline) { map.removeLayer(lgaOutline); lgaOutline = null; }
+      if (map.hasLayer(lgaTip)) map.removeLayer(lgaTip);
 
       if (geoLayer) {
         if (!map.hasLayer(geoLayer)) geoLayer.addTo(map);
@@ -2975,6 +3052,7 @@
       target.stateIncidents = {};
       target.stateFatalities = {};
       target.lgaIncidents = {};
+      target.lgaFatalities = {};
       target.lgaDisplay = {};
       target.districtIncidents = {};
       target.districtFatalities = {};
@@ -2999,6 +3077,9 @@
         target.totalIncidents++;
         countInto(target.stateIncidents, r._state);
         countInto(target.lgaIncidents, r._lgaKey);
+        if (r._lgaKey) {
+          target.lgaFatalities[r._lgaKey] = (target.lgaFatalities[r._lgaKey] || 0) + r._fatalities;
+        }
         // Keep the sheet's spelling for the LGA so the epicenter card can
         // show "Dala", not the normalised key "KANO|DALA".
         if (r._lgaKey && r._lgaName && !target.lgaDisplay[r._lgaKey]) {
