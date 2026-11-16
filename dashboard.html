@@ -45,11 +45,9 @@
       --text-3:        #76869E;
 
       --accent:        #38BDF8;
-      --accent-rgb:    56,189,248;
       --accent-soft:   rgba(56,189,248,.12);
       --indigo:        #7C8CFF;
       --ok:            #34D399;
-      --warn:          #FBBF24;
       --danger:        #FB5C77;
 
       --grid:          rgba(148,163,184,.16);
@@ -63,7 +61,6 @@
       --s6: #A78BFA;
       --s7: #94A3B8;
 
-      --map-bg: #070B14;
       --radius: 14px;
     }
     :root[data-theme="light"] {
@@ -85,11 +82,9 @@
       --text-3:        #5B6A80;
 
       --accent:        #0284C7;
-      --accent-rgb:    2,132,199;
       --accent-soft:   rgba(2,132,199,.10);
       --indigo:        #4F46E5;
       --ok:            #059669;
-      --warn:          #B45309;
       --danger:        #E11D48;
 
       --grid:          rgba(15,23,42,.10);
@@ -413,25 +408,15 @@
       display: block; color: inherit; font-weight: inherit; font-size: inherit;
     }
     .state-label .cnt.zero, .lga-label .cnt.zero { color: inherit; opacity: .7; }
-    .leaflet-tooltip.lga-label.lga-hover {
-      background: rgba(11,18,32,.92); border: 1px solid rgba(56,189,248,.4);
-      border-radius: 6px; padding: 3px 7px;
-    }
     .leaflet-container .state-shape { cursor: pointer; }
     .leaflet-container .lga-shape { cursor: pointer; }
     .leaflet-tooltip.lga-tip { width: 200px; }
 
     /* Satellite imagery is dark in both themes, so the labels are white in
        both — stated explicitly rather than inherited, so nothing in the light
-       palette can pull them dark. Only the hover chip gets a light surface,
-       and it carries its own dark ink so the text stays readable on it. */
+       palette can pull them dark. */
     :root[data-theme="light"] .leaflet-tooltip.state-label,
     :root[data-theme="light"] .leaflet-tooltip.lga-label { color: #FFFFFF; }
-    :root[data-theme="light"] .leaflet-tooltip.lga-label.lga-hover {
-      background: rgba(255,255,255,.94); border-color: rgba(2,132,199,.45);
-      color: #0E1726;
-      text-shadow: none;
-    }
 
     /* Hover card for a state. It floats over satellite imagery, so it keeps
        the dark surface and light ink in both themes; only the accent border
@@ -476,10 +461,6 @@
     /* =====================================================================
        KPI CARDS
        ===================================================================== */
-    .section-head {
-      display: flex; align-items: baseline; justify-content: space-between;
-      gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
-    }
     .kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     @media (min-width: 900px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
@@ -491,7 +472,6 @@
     }
     .kpi.is-danger { --kpi-accent: var(--danger); }
     .kpi.is-ok { --kpi-accent: var(--ok); }
-    .kpi.is-warn { --kpi-accent: var(--warn); }
     .kpi-label {
       font-size: 10px; font-weight: 800; letter-spacing: .09em;
       text-transform: uppercase; color: var(--text-3);
@@ -507,8 +487,6 @@
     /* =====================================================================
        CHART BOXES
        ===================================================================== */
-    .chart-box { height: 260px; }
-    @media (min-width: 640px) { .chart-box { height: 320px; } }
     .chart-card { display: flex; flex-direction: column; }
     canvas { max-width: 100%; }
 
@@ -536,7 +514,6 @@
       --hero-bg-2: #0D1D2F;
       --hero-line: rgba(255,255,255,.09);
       --hero-text: #EAF2FA;
-      --hero-muted:#8FA6BE;
       background: radial-gradient(120% 95% at 18% 0%, var(--hero-bg-2), var(--hero-bg) 62%);
       border: 1px solid var(--hero-line);
       border-radius: 16px;
@@ -552,7 +529,6 @@
       font-size: 11px; font-weight: 800; letter-spacing: .09em;
       text-transform: uppercase; color: var(--hero-text);
     }
-    .hero-meta { font-size: 11px; font-weight: 600; color: var(--hero-muted); }
     .hero .map-wrap { padding: 0 10px; }
     .hero #map { height: clamp(330px, 45vw, 560px); border-radius: 12px; }
     .hero .map-error { margin: 0 10px; }
@@ -2071,7 +2047,7 @@
              '<span class="' + cls + '">' + incidents.toLocaleString() + '</span>';
     }
 
-    function bindLgaTooltip(layer, state, shapeName, permanent, offset) {
+    function clearLgaLabel(layer) {
       const old = layer.getTooltip();
       const oldEl = old && (old.getElement ? old.getElement() : old._container);
       if (old) layer.unbindTooltip();
@@ -2080,16 +2056,16 @@
       // the tooltip pane, so without this every rebind leaks an element —
       // which showed up as duplicate labels and phantom overlaps.
       if (oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+    }
 
-      // Only the permanent label binds. Hover is served by the shared card,
-      // so a district that keeps a label and one that does not both answer a
-      // hover the same way.
-      if (!permanent) return;
-
+    // Only the placed label binds: hover is served by the shared card, so a
+    // district that keeps a label and one that does not answer a hover alike.
+    function bindLgaLabel(layer, state, shapeName, offset) {
+      clearLgaLabel(layer);
       layer.bindTooltip(buildLgaLabel(state, shapeName), {
-        permanent: !!permanent,
+        permanent: true,
         direction: 'center',
-        className: 'lga-label' + (permanent ? '' : ' lga-hover'),
+        className: 'lga-label',
         opacity: 1,
         offset: offset || [0, 0]
       });
@@ -2112,7 +2088,7 @@
       lgaLayer.eachLayer(layer => {
         const name = layer.feature.properties.shapeName;
         const count = lgaCount(state, name);
-        if (count <= 0) { bindLgaTooltip(layer, state, name, false); return; }
+        if (count <= 0) { clearLgaLabel(layer); return; }
         cands.push({ layer, name, count });
       });
 
@@ -2157,7 +2133,7 @@
       // Pass 1: centred labels only.
       const leftover = [];
       cands.forEach(c => {
-        bindLgaTooltip(c.layer, state, c.name, true, [0, 0]);
+        bindLgaLabel(c.layer, state, c.name, [0, 0]);
         const b = rectOf(c.layer);
         if (b && fits(b, ownRectOf(c))) placed.push(b);
         else leftover.push(c);
@@ -2168,11 +2144,11 @@
         const ownRect = ownRectOf(c);
         let accepted = false;
         for (const off of OFFSETS) {
-          bindLgaTooltip(c.layer, state, c.name, true, off);
+          bindLgaLabel(c.layer, state, c.name, off);
           const b = rectOf(c.layer);
           if (b && fits(b, ownRect)) { placed.push(b); accepted = true; break; }
         }
-        if (!accepted) bindLgaTooltip(c.layer, state, c.name, false);
+        if (!accepted) clearLgaLabel(c.layer);
       });
     }
 
@@ -2347,9 +2323,6 @@
             className: 'lga-shape',
             style: f => lgaStyle(lgaCount(state, f.properties.shapeName)),
             onEachFeature: (f, layer) => {
-              // Placed properly by layoutLgaLabels() once on the map.
-              bindLgaTooltip(layer, state, f.properties.shapeName, false);
-
               // Every district answers a hover, labelled or not: the card is a
               // standalone tooltip that follows the pointer, and the shape
               // outlines itself so it is obvious which one is being read.

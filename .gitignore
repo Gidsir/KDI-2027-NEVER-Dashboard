@@ -1,10 +1,10 @@
-dashboard.backup-*.html
-server.log
-server.pid
+# Local scratch files
 check.tmp.js
 *.tmp
-dashboard-open.png
+
+# Local dev-server artefacts
+server.log
+server.pid
+
+# Editor / agent state
 .freebuff/
-billboard-monitor/
-preview.html
-create_african_man_corporate.py
