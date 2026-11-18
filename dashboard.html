@@ -3662,6 +3662,7 @@
     // Share of this place's incidents carried by a form, over the same share
     // nationally. Needs at least two cases, or one stray report reads as a signal.
     function distinctiveOf(bucket, national) {
+      const MIN_LIFT = 1.05;   // ~10% above the national rate is enough to name a form
       let best = null, bestLift = 0;
       Object.keys(bucket.forms).forEach(f => {
         const n = bucket.forms[f];
@@ -3672,7 +3673,7 @@
         const lift = share / nat;
         if (lift > bestLift) { bestLift = lift; best = f; }
       });
-      return bestLift >= 1.25 ? best : null;
+      return bestLift >= MIN_LIFT ? best : null;
     }
 
     function signalAggregates(rows) {
