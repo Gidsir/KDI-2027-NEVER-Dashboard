@@ -1545,7 +1545,7 @@
       cycle: 'all',
       periods: null,             // multi-select periods; null = every period
       year: 'all',               // calendar year of the incident date
-      states: []                 // multi-select state slicer; empty = all states
+      states: null               // multi-select state slicer; null = every state
     };
     const yearCounts = {};       // year -> row count, for the year dropdown
     const periodCounts = {};       // distinct period -> row count, for the dropdown
@@ -2986,7 +2986,7 @@
           : filters.periods.length + ' periods');
       }
       if (filters.year !== 'all') out.push(filters.year);
-      if (filters.states.length) {
+      if (filters.states && filters.states.length) {
         out.push(filters.states.length <= 2
           ? filters.states.map(displayState).join(', ')
           : filters.states.length + ' states');
@@ -3008,7 +3008,7 @@
       if (filters.year !== 'all') {
         if (!r._date || String(r._date.getFullYear()) !== filters.year) return false;
       }
-      if (filters.states.length && filters.states.indexOf(r._state) < 0) return false;
+      if (filters.states && filters.states.indexOf(r._state) < 0) return false;
       return true;
     }
 
@@ -3181,7 +3181,8 @@
 
     function stateSlicerLabel() {
       const picked = filters.states;
-      if (!picked.length) return 'All states';
+      if (!picked) return 'All states';
+      if (!picked.length) return 'No states';
       if (picked.length === 1) return displayState(picked[0]);
       return picked.length + ' states selected';
     }
@@ -3192,17 +3193,17 @@
 
       const btn = document.getElementById('state-slicer-btn');
       if (btn) {
-        btn.classList.toggle('is-active', filters.states.length > 0);
-        btn.title = filters.states.length > 2
+        btn.classList.toggle('is-active', !!filters.states);
+        btn.title = filters.states && filters.states.length > 2
           ? filters.states.map(displayState).join(', ')
           : '';
       }
 
       const count = document.getElementById('state-sel-count');
       if (count) {
-        count.textContent = filters.states.length
-          ? filters.states.length + ' of ' + ALL_STATES.length + ' selected'
-          : '';
+        count.textContent = !filters.states
+          ? 'All ' + ALL_STATES.length + ' selected'
+          : filters.states.length + ' of ' + ALL_STATES.length + ' selected';
       }
     }
 
@@ -3234,7 +3235,7 @@
       }
 
       host.innerHTML = list.map(s => {
-        const on = filters.states.indexOf(s) >= 0;
+        const on = !filters.states || filters.states.indexOf(s) >= 0;
         return '<label class="state-opt">' +
           '<input type="checkbox" value="' + escAttr(s) + '"' + (on ? ' checked' : '') + '>' +
           '<span>' + escHtml(displayState(s)) + '</span>' +
@@ -3250,13 +3251,23 @@
     }
 
     function setStateChecked(state, on) {
+      // Unticking from "all states" materialises the full list first, so the
+      // states left over stay ticked instead of the pick collapsing to one.
+      if (!filters.states) {
+        if (on) return;
+        filters.states = ALL_STATES.slice();
+      }
+
       const i = filters.states.indexOf(state);
       if (on && i < 0) filters.states.push(state);
       else if (!on && i >= 0) filters.states.splice(i, 1);
 
+      // Every state ticked again is just "all", so drop the list.
+      if (filters.states.length === ALL_STATES.length) filters.states = null;
+
       // A drilldown selection the slicer has just excluded would blank every
       // card, so let it go.
-      if (sel.state && filters.states.length && filters.states.indexOf(sel.state) < 0) {
+      if (sel.state && filters.states && filters.states.indexOf(sel.state) < 0) {
         sel.state = null;
       }
 
@@ -3291,9 +3302,9 @@
       }
     }
 
-    // "All" is the absence of a pick, so clearing means no states ticked.
+    // "Clear" unticks every state; the panel's "All" puts the full set back.
     function clearStateSlicer() {
-      if (!filters.states.length) return;
+      if (filters.states && !filters.states.length) return;
       filters.states = [];
       syncStateSlicer();
       if (rawRows.length) aggregate();
@@ -3302,7 +3313,14 @@
       renderStateOptions(search ? search.value : '');
     }
 
-    function selectAllStates() { clearStateSlicer(); }
+    function selectAllStates() {
+      filters.states = null;
+      syncStateSlicer();
+      if (rawRows.length) aggregate();
+
+      const search = document.getElementById('state-search');
+      renderStateOptions(search ? search.value : '');
+    }
 
     document.addEventListener('click', e => {
       const field = document.querySelector('.field-states');
@@ -3568,7 +3586,10 @@
         .map(r => r._state)
         .filter((s, i, a) => a.indexOf(s) === i)
         .sort((a, b) => displayState(a).localeCompare(displayState(b)));
-      filters.states = filters.states.filter(s => ALL_STATES.indexOf(s) >= 0);
+      if (filters.states) {
+        filters.states = filters.states.filter(s => ALL_STATES.indexOf(s) >= 0);
+        if (filters.states.length === ALL_STATES.length) filters.states = null;
+      }
 
       renderPeriodOptions();
       syncPeriodSlicer();
@@ -3956,7 +3977,7 @@
       if (filters.cycle !== 'all' && r._cycle !== filters.cycle) return false;
       if (!periodSelected(r._period)) return false;
       if (filters.year !== 'all' && (!r._date || String(r._date.getFullYear()) !== filters.year)) return false;
-      if (filters.states.length && filters.states.indexOf(r._state) < 0) return false;
+      if (filters.states && filters.states.indexOf(r._state) < 0) return false;
       return true;
     }
 
