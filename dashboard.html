@@ -8,7 +8,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Chart.js & Leaflet.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -31,29 +31,32 @@
     :root {
       color-scheme: dark;
 
-      --bg:            #070B14;
-      --bg-grad:       radial-gradient(1200px 600px at 15% -10%, rgba(56,189,248,.10), transparent 60%),
-                       radial-gradient(900px 500px at 90% 0%, rgba(99,102,241,.10), transparent 55%);
-      --surface:       #0B1220;
-      --surface-2:     #0F1727;
-      --surface-3:     #141E31;
-      --border:        #1D2839;
-      --border-2:      #2A3952;
+      /* Flat, cool ink. The map is the only deep surface in the product, so
+         nothing else here glows, layers or gradients. */
+      --bg:            #0A1017;
+      --bg-grad:       none;
+      --surface:       #111925;
+      --surface-2:     #16202E;
+      --surface-3:     #1D2939;
+      --border:        #212D3E;
+      --border-2:      #31415A;
 
-      --text:          #F2F6FC;
-      --text-2:        #A7B5CB;
-      --text-3:        #76869E;
+      --text:          #F2F6FA;
+      --text-2:        #B0BDCD;
+      --text-3:        #7E8DA2;
 
       --accent:        #38BDF8;
       --accent-soft:   rgba(56,189,248,.12);
       --indigo:        #7C8CFF;
       --ok:            #34D399;
-      --danger:        #FB5C77;
+      --danger:        #FB6B7F;
 
-      --grid:          rgba(148,163,184,.16);
-      --shadow:        0 18px 40px -24px rgba(0,0,0,.85);
+      --grid:          rgba(148,163,184,.14);
+      /* Elevation means "above the page". Only popovers and tooltips get it. */
+      --shadow:        none;
+      --shadow-pop:    0 16px 40px -18px rgba(0,0,0,.80);
 
-      --s1: #FB5C77;
+      --s1: #FB6B7F;
       --s2: #F59E0B;
       --s3: #EAB308;
       --s4: #38BDF8;
@@ -61,34 +64,34 @@
       --s6: #A78BFA;
       --s7: #94A3B8;
 
-      --radius: 14px;
+      --radius: 12px;
     }
     :root[data-theme="light"] {
       color-scheme: light;
 
-      /* Off-white, not paper-white: a warm neutral keeps the cards from
-         glaring under office lighting while the blue accent still reads. */
-      --bg:            #F1F0EA;
-      --bg-grad:       radial-gradient(1100px 560px at 12% -12%, rgba(2,132,199,.10), transparent 62%),
-                       radial-gradient(900px 480px at 92% -6%, rgba(79,70,229,.08), transparent 58%);
-      --surface:       #FBFBF7;
-      --surface-2:     #F5F4EF;
-      --surface-3:     #EDECE4;
-      --border:        #E3E1D7;
-      --border-2:      #CFCCBF;
+      /* Cool grey paper and pure white cards. Nothing here is warm: a
+         briefing sheet should not read as stationery. */
+      --bg:            #EFF2F6;
+      --bg-grad:       none;
+      --surface:       #FFFFFF;
+      --surface-2:     #F5F8FB;
+      --surface-3:     #E9EFF6;
+      --border:        #E1E7EF;
+      --border-2:      #C7D1DE;
 
-      --text:          #0E1726;
-      --text-2:        #47576E;
-      --text-3:        #5B6A80;
+      --text:          #0C1522;
+      --text-2:        #45536A;
+      --text-3:        #6A7A90;
 
-      --accent:        #0284C7;
-      --accent-soft:   rgba(2,132,199,.10);
+      --accent:        #0B6E8A;
+      --accent-soft:   rgba(11,110,138,.09);
       --indigo:        #4F46E5;
-      --ok:            #059669;
-      --danger:        #E11D48;
+      --ok:            #0C7A5B;
+      --danger:        #B42334;
 
-      --grid:          rgba(15,23,42,.10);
-      --shadow:        0 14px 32px -22px rgba(15,23,42,.45);
+      --grid:          rgba(15,23,42,.09);
+      --shadow:        none;
+      --shadow-pop:    0 18px 44px -20px rgba(15,23,42,.30);
 
       --s1: #E11D48;
       --s2: #EA580C;
@@ -109,10 +112,12 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-family: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      font-variant-numeric: tabular-nums;
       background-color: var(--bg);
-      background-image: var(--bg-grad);
-      background-attachment: fixed;
       color: var(--text);
       /* `clip` (not `hidden`) — `hidden` turns the body into a scroll
          container, which stops the sticky header from sticking in some
@@ -124,10 +129,10 @@
     h1, h2, h3, p { margin: 0; }
     button, select, input { font: inherit; color: inherit; }
     .hidden { display: none !important; }
-    .wrap { width: 100%; max-width: 1720px; margin: 0 auto; padding: 0 20px; }
+    .wrap { width: 100%; max-width: 1600px; margin: 0 auto; padding: 0 18px; }
     @media (max-width: 640px) { .wrap { padding: 0 12px; } }
 
-    .muted { color: var(--text-3); font-size: 11px; font-weight: 600; }
+    .muted { color: var(--text-3); font-size: 11.5px; font-weight: 500; }
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 
     /* =====================================================================
@@ -143,23 +148,23 @@
     }
     .header-inner {
       display: flex; align-items: center; justify-content: space-between;
-      gap: 14px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px;
+      gap: 14px; flex-wrap: wrap; padding-top: 7px; padding-bottom: 7px;
     }
     .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
     /* The mark is a square file whose wordmark sits in a wide centre band, so
        the chip is widened and cropped rather than letterboxed. */
     .brand-logo {
-      height: 56px; width: 134px; border-radius: 13px;
+      height: 38px; width: 92px; border-radius: 9px;
       object-fit: cover; object-position: center 45%;
-      background: #fff; padding: 4px; flex-shrink: 0;
+      background: #fff; padding: 3px; flex-shrink: 0;
       box-shadow: 0 0 0 1px var(--border);
     }
     .brand-copy { display: flex; flex-direction: column; min-width: 0; }
     .brand-copy strong {
-      font-size: 23px; font-weight: 800; letter-spacing: -.01em; line-height: 1.12;
+      font-size: 17px; font-weight: 700; letter-spacing: -.012em; line-height: 1.2;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .brand-copy span { font-size: 13px; font-weight: 600; color: var(--text-3); letter-spacing: .02em; }
+    .brand-copy span { font-size: 11.5px; font-weight: 500; color: var(--text-3); letter-spacing: .01em; }
 
     .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
@@ -169,12 +174,12 @@
     }
     .tab {
       appearance: none; border: 0; background: transparent; cursor: pointer;
-      font-size: 12px; font-weight: 700; color: var(--text-2);
-      padding: 7px 13px; border-radius: 7px; transition: background .15s, color .15s;
+      font-size: 12.5px; font-weight: 600; color: var(--text-2);
+      padding: 6px 13px; border-radius: 7px; transition: background .15s, color .15s;
       white-space: nowrap;
     }
     .tab:hover { color: var(--text); }
-    .tab.is-active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+    .tab.is-active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.07); }
 
     .theme-toggle {
       display: inline-flex; align-items: center; gap: 6px;
@@ -202,22 +207,22 @@
     /* =====================================================================
        FILTER BAR
        ===================================================================== */
-    .filters { padding: 16px 0 4px; }
+    .filters { padding: 10px 0 0; }
     .filter-grid {
       display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
-      gap: 12px; align-items: end;
+      gap: 10px; align-items: end;
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+      border-radius: var(--radius); padding: 9px 12px 10px;
     }
-    .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
     .field label {
-      font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+      font-size: 10.5px; font-weight: 700; letter-spacing: .01em; text-transform: none;
       color: var(--text-3);
     }
-    .field-meta { align-items: flex-end; justify-content: flex-end; display: flex; padding-bottom: 9px; }
+    .field-meta { align-items: flex-end; justify-content: flex-end; display: flex; padding-bottom: 8px; }
     /* Five slicers stop fitting on one row well before this width, so they
        pair up instead of squeezing every control down to its ellipsis. */
-    @media (max-width: 1180px) {
+    @media (max-width: 1023px) {
       .filter-grid { grid-template-columns: 1fr 1fr; }
       .field-meta { grid-column: 1 / -1; padding-bottom: 0; }
     }
@@ -225,8 +230,8 @@
 
     .slicer-select {
       width: 100%; appearance: none; cursor: pointer;
-      font-size: 12px; font-weight: 700; color: var(--text);
-      padding: 9px 32px 9px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 600; color: var(--text);
+      padding: 7px 30px 7px 10px; border-radius: 8px;
       background-color: var(--surface-2); border: 1px solid var(--border);
       background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%),
                         linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
@@ -255,7 +260,7 @@
     .state-panel {
       position: absolute; z-index: 900; left: 0; right: 0; top: calc(100% + 6px);
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; box-shadow: 0 14px 34px rgba(0,0,0,.28);
+      border-radius: 10px; box-shadow: var(--shadow-pop);
       padding: 8px; display: flex; flex-direction: column; gap: 6px;
     }
     .state-panel.hidden { display: none; }
@@ -266,13 +271,13 @@
     }
     .state-search:focus { outline: none; border-color: var(--accent); }
     .state-list {
-      overflow-y: auto; max-height: 220px;
+      overflow-y: auto; max-height: 260px;
       display: flex; flex-direction: column; gap: 1px;
     }
     /* Beats the uppercase .field label styling these <label>s would inherit */
     .field .state-opt {
-      display: flex; align-items: center; gap: 8px; padding: 6px;
-      border-radius: 6px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px; padding: 7px 8px;
+      border-radius: 6px; font-size: 12.5px; font-weight: 600;
       letter-spacing: 0; text-transform: none;
       color: var(--text-2); cursor: pointer;
     }
@@ -280,7 +285,7 @@
     .state-opt:hover { background: var(--surface-2); color: var(--text); }
     .state-opt input { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
     .state-opt .n {
-      margin-left: auto; font-size: 10px; font-weight: 700;
+      margin-left: auto; font-size: 10.5px; font-weight: 700;
       color: var(--text-3); font-variant-numeric: tabular-nums;
     }
     .state-empty { margin: 0; padding: 8px 6px; font-size: 11px; color: var(--text-3); }
@@ -290,7 +295,7 @@
     }
     .link-btn {
       background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit;
-      font-size: 10px; font-weight: 800; letter-spacing: .04em; color: var(--accent);
+      font-size: 11px; font-weight: 600; letter-spacing: .01em; color: var(--accent);
     }
     .link-btn:hover { text-decoration: underline; }
 
@@ -304,8 +309,8 @@
       background: var(--surface); border: 1px solid var(--border);
     }
     .cf-label {
-      font-size: 10px; font-weight: 800; letter-spacing: .09em;
-      text-transform: uppercase; color: var(--text-3);
+      font-size: 11px; font-weight: 600; letter-spacing: .01em;
+      text-transform: none; color: var(--text-3);
     }
     .cf-chips { display: flex; flex-wrap: wrap; gap: 7px; }
     .cf-chip {
@@ -325,32 +330,33 @@
     /* =====================================================================
        PAGES & CARDS
        ===================================================================== */
-    .page { padding: 16px 0 40px; }
-    .page-inner { display: flex; flex-direction: column; gap: 16px; }
+    .page { padding: 12px 0 28px; }
+    .page-inner { display: flex; flex-direction: column; gap: 12px; }
 
     .card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 16px; transition: background .25s ease, border-color .25s ease;
+      border-radius: var(--radius);
+      padding: 14px; min-width: 0;
+      transition: background .25s ease, border-color .25s ease;
     }
     @media (max-width: 640px) { .card { padding: 13px; } }
 
     .card-head {
       display: flex; align-items: baseline; justify-content: space-between;
-      gap: 10px; flex-wrap: wrap; margin-bottom: 12px;
+      gap: 8px; flex-wrap: wrap; margin-bottom: 8px;
     }
     .card-title {
-      font-size: 12px; font-weight: 800; letter-spacing: .07em;
-      text-transform: uppercase; color: var(--text);
+      font-size: 13px; font-weight: 700; letter-spacing: -.004em;
+      text-transform: none; color: var(--text);
     }
-    .card-hint { font-size: 11px; font-weight: 600; color: var(--text-3); }
+    .card-hint { font-size: 11.5px; font-weight: 500; color: var(--text-3); }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 1100px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    .grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 1024px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
 
     /* Three equal lists: forms, perpetrators, victims. */
-    .grid-3 { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 1180px) { .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .grid-3 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 1024px) { .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
     /* =====================================================================
        MAP (container only — the Leaflet setup is untouched)
@@ -426,23 +432,23 @@
       border: 1px solid rgba(56,189,248,.42); border-radius: 9px;
       box-shadow: 0 14px 30px -16px rgba(0,0,0,.95);
       padding: 9px 11px 10px; width: 216px;
-      font-size: 11px; line-height: 1.35; white-space: normal;
+      font-size: 12px; line-height: 1.4; white-space: normal;
       pointer-events: none;
     }
     .leaflet-tooltip.state-tip::before { border-top-color: rgba(56,189,248,.42); }
     .state-tip .tip-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .state-tip .tip-head b { font-size: 12.5px; font-weight: 800; letter-spacing: -.01em; }
+    .state-tip .tip-head b { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; }
     .state-tip .tip-band {
-      flex: 0 0 auto; font-size: 8.5px; font-weight: 800;
-      letter-spacing: .07em; text-transform: uppercase;
+      flex: 0 0 auto; font-size: 9.5px; font-weight: 700;
+      letter-spacing: .02em; text-transform: none;
       padding: 2px 6px; border-radius: 999px; border: 1px solid currentColor;
     }
     .state-tip .tip-stats {
       display: flex; align-items: baseline; gap: 10px;
-      margin-top: 6px; font-size: 10px; color: #9FB0C7; white-space: nowrap;
+      margin-top: 6px; font-size: 11px; color: #9FB0C7; white-space: nowrap;
     }
     .state-tip .tip-stats b { color: #F2F6FC; font-weight: 800; font-size: 12px; }
-    .state-tip .tip-stats small { color: #7D8DA3; font-size: 9px; font-weight: 700; }
+    .state-tip .tip-stats small { color: #8A9AB0; font-size: 10px; font-weight: 600; }
     .state-tip .tip-meter {
       height: 3px; border-radius: 2px; margin: 6px 0 7px;
       background: rgba(148,163,184,.24); overflow: hidden;
@@ -450,8 +456,8 @@
     .state-tip .tip-meter i { display: block; height: 100%; border-radius: 2px; }
     .state-tip .tip-line { display: flex; align-items: baseline; gap: 7px; margin-top: 3px; }
     .state-tip .tip-line span {
-      flex: 0 0 46px; color: #7D8DA3; font-size: 8.5px; font-weight: 800;
-      letter-spacing: .06em; text-transform: uppercase;
+      flex: 0 0 52px; color: #8A9AB0; font-size: 9.5px; font-weight: 700;
+      letter-spacing: .01em; text-transform: none;
     }
     .state-tip .tip-line em {
       color: #EAF2FA; font-style: normal; font-weight: 600;
@@ -467,21 +473,20 @@
     .kpi {
       position: relative; overflow: hidden;
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 14px 15px 14px 17px;
-      box-shadow: var(--shadow);
+      border-radius: var(--radius); padding: 13px 15px 14px 16px;
     }
     .kpi.is-danger { --kpi-accent: var(--danger); }
     .kpi.is-ok { --kpi-accent: var(--ok); }
     .kpi-label {
-      font-size: 10px; font-weight: 800; letter-spacing: .09em;
-      text-transform: uppercase; color: var(--text-3);
+      font-size: 11px; font-weight: 600; letter-spacing: .01em;
+      text-transform: none; color: var(--text-3);
     }
     .kpi-value {
-      margin-top: 6px; font-size: 26px; line-height: 1.1; font-weight: 800;
+      margin-top: 5px; font-size: 30px; line-height: 1.08; font-weight: 700;
       letter-spacing: -.015em; color: var(--kpi-accent, var(--accent));
       font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
     }
-    .kpi-sub { margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--text-3); }
+    .kpi-sub { margin-top: 3px; font-size: 11.5px; font-weight: 500; color: var(--text-3); }
     @media (max-width: 480px) { .kpi-value { font-size: 21px; } }
 
     /* =====================================================================
@@ -499,8 +504,8 @@
     /* =====================================================================
        OVERVIEW SPLIT  —  dark map hero beside a light insight column
        ===================================================================== */
-    .overview-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 1080px) {
+    .overview-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 1024px) {
       .overview-grid {
         grid-template-columns: minmax(0, 1.7fr) minmax(330px, 1fr);
         align-items: stretch;
@@ -523,14 +528,14 @@
     }
     .hero-head {
       display: flex; align-items: baseline; justify-content: space-between;
-      gap: 10px; flex-wrap: wrap; padding: 15px 18px 11px;
+      gap: 10px; flex-wrap: wrap; padding: 12px 16px 8px;
     }
     .hero-title {
-      font-size: 11px; font-weight: 800; letter-spacing: .09em;
-      text-transform: uppercase; color: var(--hero-text);
+      font-size: 13px; font-weight: 600; letter-spacing: -.004em;
+      text-transform: none; color: var(--hero-text);
     }
     .hero .map-wrap { padding: 0 10px; }
-    .hero #map { height: clamp(330px, 45vw, 560px); border-radius: 12px; }
+    .hero #map { height: clamp(300px, 34vw, 440px); border-radius: 10px; }
     .hero .map-error { margin: 0 10px; }
 
     /* Floating legend, mirroring the choropleth breaks */
@@ -540,7 +545,7 @@
       padding: 7px 11px; border-radius: 9px;
       background: rgba(6,14,24,.82); border: 1px solid rgba(255,255,255,.13);
       backdrop-filter: blur(8px);
-      font-size: 10px; font-weight: 700; color: #D7E3F1;
+      font-size: 11px; font-weight: 600; color: #D7E3F1;
     }
     .map-legend i {
       width: 9px; height: 9px; border-radius: 2px; display: inline-block;
@@ -548,8 +553,8 @@
     }
     .legend-scale { display: inline-flex; align-items: center; gap: 7px; }
     .legend-title {
-      font-size: 9px; font-weight: 800; letter-spacing: .07em;
-      text-transform: uppercase; color: #94A9C2;
+      font-size: 10px; font-weight: 700; letter-spacing: .01em;
+      text-transform: none; color: #94A9C2;
     }
     .legend-edge { font-variant-numeric: tabular-nums; }
     /* Same four stops as RAMP in the script, so the key and the map agree. */
@@ -565,21 +570,21 @@
     .lower-grid {
       grid-column: 1 / -1;
       display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.55fr);
-      gap: 16px; align-items: stretch;
+      gap: 12px; align-items: stretch;
     }
     /* Both panels share the row height: the taller list sets it and the trend
        plot grows into the rest, so the two cards always end level. */
     .lower-grid > .card { display: flex; flex-direction: column; }
     /* The canvas is taken out of flow so the plot area is sized by CSS only;
        otherwise the canvas' own pixel height keeps the box from filling up. */
-    .lower-grid .trend-box { height: auto; flex: 1 1 0%; min-height: 220px; position: relative; }
+    .lower-grid .trend-box { height: auto; flex: 1 1 0%; min-height: 0; position: relative; }
     .lower-grid .trend-box canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
     .lower-grid .bar-fill { background: linear-gradient(90deg, var(--accent), var(--indigo)); }
 
     /* Zone panel: each row carries both measures, one bar each */
     .zone-key {
-      display: flex; gap: 16px; margin-bottom: 8px;
-      font-size: 10px; font-weight: 700; color: var(--text-3);
+      display: flex; gap: 16px; margin-bottom: 4px;
+      font-size: 11px; font-weight: 600; color: var(--text-3);
     }
     .zone-key span { display: inline-flex; align-items: center; gap: 5px; }
     .zone-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
@@ -588,20 +593,20 @@
     .zone-rows { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; justify-content: space-between; }
     .zone-row {
       display: grid; grid-template-columns: minmax(88px, 38%) 1fr auto;
-      align-items: center; gap: 10px; width: 100%; padding: 6px 7px;
+      align-items: center; gap: 10px; width: 100%; padding: 1px 7px;
       border: 0; border-radius: 7px; background: transparent; cursor: pointer;
       text-align: left; transition: background .14s;
     }
     .zone-row:hover { background: var(--surface-2); }
     .zone-row.is-selected { background: var(--accent-soft); }
     .zone-name {
-      font-size: 11px; font-weight: 700; color: var(--text-2);
+      font-size: 12px; font-weight: 600; color: var(--text-2);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .zone-row.is-selected .zone-name { color: var(--accent); }
-    .zone-bars { display: flex; flex-direction: column; gap: 3px; }
+    .zone-bars { display: flex; flex-direction: column; gap: 2px; }
     .zone-bar {
-      display: block; height: 6px; border-radius: 999px;
+      display: block; height: 5px; border-radius: 999px;
       background: var(--surface-3); overflow: hidden;
     }
     .zone-bar i {
@@ -610,9 +615,9 @@
       transition: width .3s ease;
     }
     .zone-bar.is-fatal i { background: var(--danger); }
-    .zone-nums { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+    .zone-nums { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.12; }
     .zone-nums b {
-      font-size: 11px; font-weight: 800; color: var(--text);
+      font-size: 12px; font-weight: 700; color: var(--text);
       font-variant-numeric: tabular-nums;
     }
     .zone-nums span {
@@ -648,9 +653,9 @@
       flex: 1 1 auto; min-height: 0; justify-content: space-between; gap: 0;
     }
     .bar-row {
-      display: grid; grid-template-columns: minmax(70px, 42%) 1fr auto;
+      display: grid; grid-template-columns: minmax(84px, 50%) 1fr auto;
       align-items: center; gap: 10px; width: 100%;
-      padding: 5px 7px; border: 0; border-radius: 7px;
+      padding: 4px 7px; border: 0; border-radius: 7px;
       background: transparent; cursor: pointer; text-align: left;
       transition: background .14s, opacity .14s;
     }
@@ -658,23 +663,23 @@
     .bar-row.is-dim { opacity: .42; }
     .bar-row.is-selected { background: var(--accent-soft); }
     .bar-label {
-      font-size: 11px; font-weight: 700; color: var(--text-2);
+      font-size: 12px; font-weight: 600; color: var(--text-2);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .bar-row.is-selected .bar-label { color: var(--accent); }
-    .bar-track { height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+    .bar-track { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
     .bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width .3s ease; }
     .bar-row.is-selected .bar-fill { background: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
     .bar-value {
-      font-size: 11px; font-weight: 800; color: var(--text);
-      font-variant-numeric: tabular-nums; min-width: 28px; text-align: right;
+      font-size: 12px; font-weight: 700; color: var(--text);
+      font-variant-numeric: tabular-nums; min-width: 30px; text-align: right;
     }
     .rows-empty { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 10px 7px; }
     .rows-head {
       display: flex; align-items: baseline; justify-content: space-between;
-      gap: 8px; margin: 12px 0 6px;
-      font-size: 10px; font-weight: 800; letter-spacing: .09em;
-      text-transform: uppercase; color: var(--text-3);
+      gap: 8px; margin: 9px 0 4px;
+      font-size: 10.5px; font-weight: 700; letter-spacing: .01em;
+      text-transform: none; color: var(--text-3);
     }
 
     /* =====================================================================
@@ -694,7 +699,7 @@
       display: flex; align-items: baseline; justify-content: space-between;
       gap: 8px; padding: 2px 2px 0;
     }
-    .insight-title { font-size: 19px; font-weight: 800; letter-spacing: -.015em; }
+    .insight-title { font-size: 14px; font-weight: 700; letter-spacing: -.004em; color: var(--text-2); }
 
     /* Three cards in one row — the strip is horizontal, never a 2+1 grid */
     .kpi-grid {
@@ -704,13 +709,13 @@
 
     /* Sample styling: value first, label under it, accent along the top edge.
        Type is deliberately small so three cards read in a single line. */
-    .kpi { padding: 10px 11px 11px; border-radius: 10px; min-width: 0; }
-    .kpi-value { margin-top: 1px; font-size: 21px; line-height: 1.05; }
+    .kpi { padding: 11px 12px 12px; border-radius: 10px; min-width: 0; }
+    .kpi-value { margin-top: 2px; font-size: 24px; line-height: 1.05; }
     .kpi-label {
-      margin-top: 4px; font-size: 9px; letter-spacing: .05em; line-height: 1.3;
+      margin-top: 5px; font-size: 10.5px; letter-spacing: .01em; line-height: 1.3;
       white-space: normal;
     }
-    .kpi-sub { margin-top: 3px; font-size: 9.5px; line-height: 1.3; color: var(--text-3); }
+    .kpi-sub { margin-top: 3px; font-size: 10.5px; line-height: 1.3; color: var(--text-3); }
 
     /* Segmented control, as in the sample's VICTIMS / PERPETRATORS toggle */
     .seg {
@@ -721,7 +726,7 @@
     .seg-btn {
       border: 0; cursor: pointer; padding: 8px 10px; border-radius: 7px;
       background: transparent; color: var(--text-3);
-      font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+      font-size: 11.5px; font-weight: 600; letter-spacing: .01em; text-transform: none;
       transition: background .15s, color .15s;
     }
     .seg-btn:hover { color: var(--text); }
@@ -729,7 +734,7 @@
 
     .trend-box { height: 236px; margin-top: 2px; }
     .trend-legend { display: flex; gap: 12px; justify-content: flex-end; margin-bottom: 4px; }
-    .trend-legend span { font-size: 10px; font-weight: 700; color: var(--text-3); }
+    .trend-legend span { font-size: 11px; font-weight: 600; color: var(--text-3); }
     .trend-legend i {
       width: 8px; height: 8px; border-radius: 2px; display: inline-block;
       margin-right: 5px; vertical-align: 0;
@@ -752,17 +757,17 @@
        ===================================================================== */
     .signals-note { margin-bottom: 10px; line-height: 1.55; font-size: 11.5px; }
     .signals-note b { color: var(--text-2); font-weight: 800; }
-    .signal-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 12px; }
-    .signal-table th, .signal-table td { padding: 9px 10px; text-align: left; }
+    .signal-table { width: 100%; min-width: 880px; border-collapse: collapse; font-size: 12.5px; }
+    .signal-table th, .signal-table td { padding: 8px 10px; text-align: left; }
     .signal-table thead th {
-      background: var(--surface-2); color: var(--text-2);
-      font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+      background: var(--surface-2); color: var(--text-3);
+      font-size: 11px; font-weight: 700; letter-spacing: .01em; text-transform: none;
       border-bottom: 1px solid var(--border); white-space: nowrap;
     }
     .signal-table thead th.group-e, .signal-table thead th.col-e { border-bottom-color: var(--danger); }
     .signal-table thead th.group-n, .signal-table thead th.col-n { border-bottom-color: var(--accent); }
-    .signal-table thead th.group-e, .signal-table thead th.group-n { text-align: center; letter-spacing: .1em; }
-    .signal-table tbody tr { border-bottom: 1px solid var(--border-2); }
+    .signal-table thead th.group-e, .signal-table thead th.group-n { text-align: center; letter-spacing: .02em; }
+    .signal-table tbody tr { border-bottom: 1px solid var(--border); }
     .signal-table tbody tr:hover { background: var(--surface-2); }
     .signal-table tbody tr.is-selected { background: var(--accent-soft); }
 
@@ -774,11 +779,11 @@
     .signal-table tr.sig-state-row .sig-state { padding-left: 30px; font-weight: 700; color: var(--text-2); }
     .zone-toggle {
       background: none; border: 0; cursor: pointer; color: var(--text-3);
-      font-size: 10px; line-height: 1; padding: 2px 7px 2px 0; vertical-align: 1px;
+      font-size: 11px; line-height: 1; padding: 2px 7px 2px 0; vertical-align: 1px;
     }
     .zone-toggle:hover { color: var(--accent); }
     .zone-count {
-      margin-left: 6px; font-size: 10px; font-weight: 700; color: var(--text-3);
+      margin-left: 6px; font-size: 10.5px; font-weight: 700; color: var(--text-3);
       background: var(--surface-3); border-radius: 999px; padding: 1px 6px;
     }
     .zone-filter {
@@ -788,7 +793,7 @@
     .zone-filter:hover { text-decoration: underline; }
     .signal-table tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     .signal-table td.num {
-      text-align: right; font-variant-numeric: tabular-nums; font-weight: 700;
+      text-align: right; font-variant-numeric: tabular-nums; font-weight: 600;
       color: var(--text);
     }
     .signal-table td.num.zero { color: var(--text-3); font-weight: 600; }
@@ -805,7 +810,7 @@
     /* =====================================================================
        TENSION PAGE
        ===================================================================== */
-    #page-tension .page-inner > * { margin-bottom: 16px; }
+    #page-tension .page-inner > * { margin-bottom: 12px; }
     #page-tension .page-inner > *:last-child { margin-bottom: 0; }
 
     /* The insight rail redefines .kpi-grid to three columns, so the page
@@ -814,23 +819,23 @@
     @media (min-width: 860px) {
       #page-tension .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
-    #page-tension .kpi { padding: 14px 15px 14px 17px; border-radius: var(--radius); }
-    #page-tension .kpi-value { margin-top: 6px; font-size: 26px; }
-    #page-tension .kpi-label { margin-top: 3px; font-size: 10px; letter-spacing: .06em; }
-    #page-tension .kpi-sub { margin-top: 4px; font-size: 11px; }
+    #page-tension .kpi { padding: 11px 14px 12px 15px; border-radius: var(--radius); }
+    #page-tension .kpi-value { margin-top: 5px; font-size: 24px; }
+    #page-tension .kpi-label { margin-top: 3px; font-size: 11px; letter-spacing: .01em; }
+    #page-tension .kpi-sub { margin-top: 4px; font-size: 11.5px; }
 
     .tension-head {
       display: flex; align-items: flex-start; justify-content: space-between;
       gap: 14px; flex-wrap: wrap;
     }
-    .tension-title { font-size: 17px; font-weight: 800; letter-spacing: -.012em; }
+    .tension-title { font-size: 14px; font-weight: 700; letter-spacing: -.004em; color: var(--text-2); }
     .tension-head .muted { max-width: 640px; margin-top: 5px; line-height: 1.55; font-size: 11.5px; }
 
-    .tension-table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 12px; }
-    .tension-table th, .tension-table td { padding: 8px 10px; text-align: left; }
+    .tension-table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 12.5px; }
+    .tension-table th, .tension-table td { padding: 7px 10px; text-align: left; }
     .tension-table thead th {
-      background: var(--surface-2); color: var(--text-2);
-      font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+      background: var(--surface-2); color: var(--text-3);
+      font-size: 11px; font-weight: 700; letter-spacing: .01em; text-transform: none;
       border-bottom: 1px solid var(--border); white-space: nowrap;
     }
     .tension-table td.num, .tension-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -841,17 +846,17 @@
 
     /* The trend needs the room: two series and two axes on one plot. The
        regime table takes the narrow column and scrolls inside a fixed height. */
-    @media (min-width: 1100px) {
+    @media (min-width: 1024px) {
       #page-tension .grid-2 { grid-template-columns: minmax(0, 1.95fr) minmax(300px, 1fr); }
     }
     #page-tension .chart-card { display: flex; flex-direction: column; }
-    #page-tension .chart-card .trend-box { flex: 1 1 auto; min-height: 320px; height: 340px; }
+    #page-tension .chart-card .trend-box { flex: 1 1 auto; min-height: 220px; height: auto; }
 
     /* Same height as the chart beside it. The row is given one height, the
        chart fills it, and the regime card stretches to the same box, so the
        table scrolls inside the card instead of stretching the row. */
-    @media (min-width: 1100px) {
-      #page-tension .grid-2 { grid-template-rows: 428px; }
+    @media (min-width: 1024px) {
+      #page-tension .grid-2 { grid-template-rows: 300px; }
       #page-tension .chart-card .trend-box { height: auto; min-height: 0; }
       #page-tension .regime-card { height: 100%; }
     }
@@ -860,7 +865,7 @@
       min-height: 0; max-height: none;
     }
     #page-tension .regime-card .table-scroll {
-      flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: auto; scrollbar-width: thin;
+      flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
     }
     /* Collapsed to zones the table is short, so let the rows share the spare
        height and carry the numbers down to the card's base. Expanded, the rows
@@ -881,16 +886,16 @@
     /* Threat form × violence form matrix */
     .matrix-table {
       width: 100%; min-width: 640px;
-      border-collapse: separate; border-spacing: 1px; font-size: 11px;
+      border-collapse: separate; border-spacing: 1px; font-size: 12px;
     }
-    .matrix-table th, .matrix-table td { padding: 6px 7px; text-align: center; }
+    .matrix-table th, .matrix-table td { padding: 5px 7px; text-align: center; }
     .matrix-table thead th {
-      background: var(--surface-2); color: var(--text-2);
-      font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+      background: var(--surface-2); color: var(--text-3);
+      font-size: 10.5px; font-weight: 700; letter-spacing: .01em; text-transform: none;
     }
     .matrix-table th.m-row {
       text-align: left; background: transparent; white-space: nowrap;
-      font-size: 10.5px; font-weight: 700; letter-spacing: 0;
+      font-size: 12px; font-weight: 600; letter-spacing: 0;
       text-transform: none; color: var(--text-2);
     }
     .matrix-table th.m-corner {
@@ -941,12 +946,115 @@
     /* A filtered slice leaves only a handful of forms; the rows share the
        card's height so the last bar sits on the base however few there are. */
     #page-tension .tension-three .card {
-      display: flex; flex-direction: column; min-height: 400px;
+      display: flex; flex-direction: column; min-height: 0;
     }
     #page-tension .tension-three .bar-rows { flex: 1 1 auto; justify-content: space-between; }
-    .tension-three { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 1180px) {
+    .tension-three { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 1024px) {
       .tension-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    /* =====================================================================
+       ONE SCREEN PER PAGE
+       The window is the layout. The header and filter strip take a fixed
+       slice, each page divides the rest into bands, and long lists scroll
+       inside their own card. Below 1080px, or in a short window, the
+       document scrolls normally the way a phone needs it to.
+       ===================================================================== */
+    @media (min-width: 1024px) and (min-height: 640px) {
+      html, body { height: 100%; }
+      body {
+        height: 100dvh; overflow: hidden;
+        display: flex; flex-direction: column;
+      }
+      .app-header, .filters, .cf-bar { flex: 0 0 auto; }
+      .app-header { position: static; }
+
+      main.page {
+        flex: 1 1 auto; min-height: 0;
+        padding: 10px 0 12px;
+        overflow-y: auto; overflow-x: hidden;
+        scrollbar-width: thin;
+      }
+      .page-inner { height: 100%; min-height: 0; align-content: stretch; gap: 10px; }
+      .page-inner > * { min-height: 0; }
+
+      /* Overview: map and summary rail above, zones and trend below. */
+      #page-overview .page-inner { display: grid; grid-template-rows: minmax(0, 1fr); }
+      .overview-grid { height: 100%; grid-template-rows: minmax(0, 1.45fr) minmax(0, 1fr); }
+      .hero { display: flex; flex-direction: column; min-height: 0; }
+      .hero .map-wrap { display: flex; flex: 1 1 auto; min-height: 0; }
+      .hero #map { flex: 1 1 auto; height: auto; min-height: 200px; }
+      .insight { min-height: 0; overflow: hidden; }
+      .lower-grid { min-height: 0; }
+      .lower-grid > .card { overflow: hidden; }
+      .zone-rows { overflow-y: auto; scrollbar-width: thin; }
+      .insight .bar-rows { overflow-y: auto; scrollbar-width: thin; }
+      .insight > .card:last-child { overflow: hidden; }
+
+      /* Threat: summary strip, three lists, then the signals table. */
+      #page-threats .page-inner { display: grid; grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.3fr); }
+      #page-threats .grid-3 > .card { overflow: hidden; }
+      #page-threats .grid-3 .bar-rows { overflow-y: auto; }
+      #page-threats .page-inner > section.card { display: flex; flex-direction: column; }
+      #page-threats .page-inner > section.card .table-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
+      #page-threats .page-inner > section.card thead th { position: sticky; top: 0; z-index: 2; }
+
+      /* Tension: five bands, each sized by the window, each scrolling inside. */
+      /* Tension carries five bands and a matrix; squeezed below about 800px
+         of window the table collapses, so the bands keep their natural height
+         and the page scrolls the little that is left over. */
+      #page-tension .page-inner {
+        display: grid;
+        grid-template-rows: auto auto minmax(240px, 1fr) auto auto;
+        height: auto; min-height: 100%;
+      }
+      #page-tension .page-inner > * { margin-bottom: 0; }
+      #page-tension .grid-2 { grid-template-rows: minmax(0, 1fr); }
+      #page-tension .chart-card .trend-box { height: auto; min-height: 0; }
+      #page-tension .page-inner > section.card { display: flex; flex-direction: column; }
+      #page-tension .page-inner > section.card .table-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
+      #page-tension .tension-three .card { overflow: hidden; }
+      #page-tension .tension-three .bar-rows { overflow-y: auto; }
+
+    }
+
+    /* Narrow laptops: keep the header on one line and the subtitle off it. */
+    @media (max-width: 1200px) and (min-width: 641px) {
+      .brand-copy span { display: none; }
+      .header-right { gap: 8px; }
+      .tab { padding: 6px 10px; font-size: 12px; }
+    }
+    @media (min-width: 1024px) and (min-height: 640px) {
+      /* The shared summary strip was built for the narrow rail; on the Threat
+         page it runs full width, so it lays out as one compact row. */
+      #kpi-slot-threats:empty { display: none; }
+      #kpi-slot-threats .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #page-threats .kpi { display: flex; align-items: baseline; gap: 10px; padding: 7px 13px; }
+      #page-threats .kpi-value { margin: 0; font-size: 22px; }
+      #page-threats .kpi-label { margin: 0; white-space: nowrap; }
+      #page-threats .kpi-sub { display: none; }
+    }
+    /* Scrollers inside cards: a quiet 8px bar instead of the OS slab. */
+    .bar-rows::-webkit-scrollbar,
+    .zone-rows::-webkit-scrollbar,
+    .table-scroll::-webkit-scrollbar,
+    .state-list::-webkit-scrollbar { width: 8px; height: 8px; }
+    .bar-rows::-webkit-scrollbar-thumb,
+    .zone-rows::-webkit-scrollbar-thumb,
+    .table-scroll::-webkit-scrollbar-thumb,
+    .state-list::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 999px; }
+    .bar-rows::-webkit-scrollbar-track,
+    .zone-rows::-webkit-scrollbar-track,
+    .table-scroll::-webkit-scrollbar-track,
+    .state-list::-webkit-scrollbar-track { background: transparent; }
+
+    /* Short laptop screens: the explainer is the first thing to go. */
+    @media (min-width: 1024px) and (max-height: 820px) {
+      .signals-note { display: none; }
+      .brand-copy span { display: none; }
+      .hero-head { padding: 9px 14px 6px; }
+      .page { padding: 8px 0 10px; }
     }
   </style>
 </head>
@@ -1081,7 +1189,7 @@
         <!-- Map Container (markup and behaviour unchanged) -->
         <section class="hero">
           <div class="hero-head">
-            <h2 class="hero-title" id="map-title">Number of violence across states </h2>
+            <h2 class="hero-title" id="map-title">Incidents by state </h2>
           </div>
           <div class="map-wrap">
             <div id="map"></div>
@@ -1164,7 +1272,7 @@
 
           <section class="card chart-card">
             <div class="card-head">
-              <h2 class="card-title">incidents per month</h2>
+              <h2 class="card-title">Incidents per month</h2>
               <span class="card-hint" id="trend-peak"></span>
             </div>
             <div class="trend-legend" id="trendLegend"></div>
@@ -1186,7 +1294,7 @@
       <div class="grid-3">
         <section class="card">
           <div class="card-head">
-            <h2 class="card-title">Forms of violence recorded</h2>
+            <h2 class="card-title">Forms of violence</h2>
           </div>
           <div class="bar-rows" id="formsRows"></div>
         </section>
@@ -1208,7 +1316,7 @@
 
       <section class="card">
         <div class="card-head">
-          <h2 class="card-title">State signals &mdash; electoral vs non-electoral</h2>
+          <h2 class="card-title">State signals: electoral vs non-electoral</h2>
           <span class="card-hint">Click a header to sort</span>
           <button type="button" class="link-btn" id="signal-expand" onclick="toggleAllSignalZones()">Expand all</button>
         </div>
@@ -2683,6 +2791,18 @@
     if (window.ResizeObserver) {
       const trendBox = document.querySelector('.lower-grid .trend-box');
       if (trendBox) new ResizeObserver(() => resizeCharts()).observe(trendBox);
+
+      // The map is sized by its card, not by a fixed height, so it also has to
+      // be told when that box changes. Without this the panel keeps the size it
+      // was first drawn at and the polygons sit off-centre in the frame.
+      const mapBox = document.getElementById('map');
+      if (mapBox) {
+        let mapTimer = null;
+        new ResizeObserver(() => {
+          clearTimeout(mapTimer);
+          mapTimer = setTimeout(() => map.invalidateSize(), 120);
+        }).observe(mapBox);
+      }
     }
 
     function updateCharts() {
