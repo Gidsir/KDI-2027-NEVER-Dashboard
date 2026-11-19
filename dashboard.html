@@ -209,7 +209,7 @@
        ===================================================================== */
     .filters { padding: 10px 0 0; }
     .filter-grid {
-      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+      display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)) auto;
       gap: 10px; align-items: end;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 9px 12px 10px;
@@ -220,7 +220,7 @@
       color: var(--text-3);
     }
     .field-meta { align-items: flex-end; justify-content: flex-end; display: flex; padding-bottom: 8px; }
-    /* Five slicers stop fitting on one row well before this width, so they
+    /* Six slicers stop fitting on one row well before this width, so they
        pair up instead of squeezing every control down to its ellipsis. */
     @media (max-width: 1023px) {
       .filter-grid { grid-template-columns: 1fr 1fr; }
@@ -244,6 +244,29 @@
     .slicer-select:focus { outline: none; border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-soft); }
     .slicer-select option { background: var(--surface); color: var(--text); }
+
+    /* A long selection ellipsizes on one line instead of shoving the chevron. */
+    .state-select > span {
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Date-range slicer */
+    .field-dates { position: relative; }
+    .date-panel { left: auto; right: 0; width: 252px; }
+    .date-row { display: flex; align-items: center; gap: 8px; }
+    .date-row .date-lbl {
+      flex: 0 0 30px; font-size: 10.5px; font-weight: 700; color: var(--text-3);
+    }
+    .date-input {
+      flex: 1 1 auto; min-width: 0; width: 100%; font: inherit;
+      font-size: 12px; font-weight: 600; color: var(--text);
+      padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .date-input:hover { border-color: var(--border-2); }
+    .date-input:focus { outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft); }
+    .date-input::-webkit-calendar-picker-indicator { opacity: .55; cursor: pointer; }
 
     /* Multi-select state slicer */
     .field-states, .field-periods { position: relative; }
@@ -1158,6 +1181,33 @@
           </select>
         </div>
 
+        <div class="field field-dates">
+          <label for="date-slicer-btn">Date range</label>
+          <button type="button" id="date-slicer-btn" class="slicer-select state-select"
+                  aria-haspopup="true" aria-expanded="false" onclick="toggleDateSlicer()">
+            <span id="date-slicer-label">All dates</span>
+            <svg class="chev" width="10" height="6" viewBox="0 0 10 6" fill="none"
+                 stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M1 1l4 4 4-4"></path>
+            </svg>
+          </button>
+          <div class="state-panel date-panel hidden" id="date-panel">
+            <div class="date-row">
+              <label class="date-lbl" for="date-from">From</label>
+              <input id="date-from" class="date-input" type="date" onchange="applyDateRange()">
+            </div>
+            <div class="date-row">
+              <label class="date-lbl" for="date-to">To</label>
+              <input id="date-to" class="date-input" type="date" onchange="applyDateRange()">
+            </div>
+            <div class="state-foot">
+              <button type="button" class="link-btn" onclick="clearDateRange()">Clear</button>
+              <span class="muted" id="date-sel-count"></span>
+              <button type="button" class="link-btn" onclick="closeDateSlicer()">Done</button>
+            </div>
+          </div>
+        </div>
+
         <div class="field field-states">
           <label for="state-slicer-btn">States</label>
           <button type="button" id="state-slicer-btn" class="slicer-select state-select"
@@ -1671,6 +1721,8 @@
       cycle: 'all',
       periods: null,             // multi-select periods; null = every period
       year: 'all',               // calendar year of the incident date
+      dateFrom: null,            // Date or null - lower bound, inclusive
+      dateTo: null,              // Date or null - upper bound, whole day
       states: null               // multi-select state slicer; null = every state
     };
     const yearCounts = {};       // year -> row count, for the year dropdown
@@ -2743,7 +2795,9 @@
 
     // Esc backs out of the drilldown, matching the on-map button.
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') zoomOut();
+      if (e.key !== 'Escape') return;
+      closeDateSlicer();
+      zoomOut();
     });
     // ============================================================
     // 4. Ranked lists + the trend chart
@@ -3319,6 +3373,7 @@
           : filters.periods.length + ' periods');
       }
       if (filters.year !== 'all') out.push(filters.year);
+      if (filters.dateFrom || filters.dateTo) out.push(dateSlicerLabel());
       if (filters.states && filters.states.length) {
         out.push(filters.states.length <= 2
           ? filters.states.map(displayState).join(', ')
@@ -3340,6 +3395,14 @@
       // rows drop out rather than being guessed into one.
       if (filters.year !== 'all') {
         if (!r._date || String(r._date.getFullYear()) !== filters.year) return false;
+      }
+      // A date range keeps its endpoints: dateTo runs to the end of its day,
+      // so picking the same day twice still returns that day's incidents.
+      if (filters.dateFrom || filters.dateTo) {
+        if (!r._date) return false;
+        const t = r._date.getTime();
+        if (filters.dateFrom && t < filters.dateFrom.getTime()) return false;
+        if (filters.dateTo && t > filters.dateTo.getTime() + 86399999) return false;
       }
       if (filters.states && filters.states.indexOf(r._state) < 0) return false;
       return true;
@@ -3660,6 +3723,8 @@
       if (field && !field.contains(e.target)) closeStateSlicer();
       const periodField = document.querySelector('.field-periods');
       if (periodField && !periodField.contains(e.target)) closePeriodSlicer();
+      const dateField = document.querySelector('.field-dates');
+      if (dateField && !dateField.contains(e.target)) closeDateSlicer();
     });
 
     // Year dropdown, newest first, from the years the sheet actually has. A
@@ -3687,6 +3752,136 @@
       });
 
       selEl.value = filters.year;
+    }
+
+    // ------------------------------------------------------------------
+    // Date range - from / to, inclusive, on the incident date
+    // ------------------------------------------------------------------
+    // filters.dateFrom / filters.dateTo hold Date objects at local midnight.
+    // Both are optional, so an open-ended range ("From 4 Mar") works. Undated
+    // rows drop out of a range, exactly as they drop out of a year pick,
+    // rather than being guessed into one.
+    const DAY_FMT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const MONTHDAY_FMT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+    let DATE_MIN = null, DATE_MAX = null;   // extent of the loaded data
+
+    function isoDay(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+        '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function parseIsoDay(value) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+      if (!m) return null;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // "12 Mar - 4 May 2027" when both ends share a year, both years spelled out
+    // when they do not, so the button label stays short either way.
+    function dateSlicerLabel() {
+      const a = filters.dateFrom, b = filters.dateTo;
+      if (a && b) {
+        return a.getFullYear() === b.getFullYear()
+          ? MONTHDAY_FMT.format(a) + ' \u2013 ' + DAY_FMT.format(b)
+          : DAY_FMT.format(a) + ' \u2013 ' + DAY_FMT.format(b);
+      }
+      if (a) return 'From ' + DAY_FMT.format(a);
+      if (b) return 'Until ' + DAY_FMT.format(b);
+      return 'All dates';
+    }
+
+    function syncDateSlicer() {
+      const label = document.getElementById('date-slicer-label');
+      const btn = document.getElementById('date-slicer-btn');
+      const text = dateSlicerLabel();
+      if (label) label.textContent = text;
+      if (btn) {
+        btn.classList.toggle('is-active', !!(filters.dateFrom || filters.dateTo));
+        btn.title = text;
+      }
+      const count = document.getElementById('date-sel-count');
+      if (count) {
+        count.textContent = (filters.dateFrom || filters.dateTo)
+          ? live.totalIncidents.toLocaleString() + ' records'
+          : '';
+      }
+    }
+
+    // Keep the pickers inside the data's own extent, so a date the sheet does
+    // not cover cannot be chosen and the calendar opens on a useful month.
+    function buildDateBounds() {
+      let lo = null, hi = null;
+      rawRows.forEach(r => {
+        if (!r._date) return;
+        const t = r._date.getTime();
+        if (lo === null || t < lo) lo = t;
+        if (hi === null || t > hi) hi = t;
+      });
+      DATE_MIN = lo === null ? null : new Date(lo);
+      DATE_MAX = hi === null ? null : new Date(hi);
+
+      ['date-from', 'date-to'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.min = DATE_MIN ? isoDay(DATE_MIN) : '';
+        el.max = DATE_MAX ? isoDay(DATE_MAX) : '';
+      });
+    }
+
+    function toggleDateSlicer() {
+      const panel = document.getElementById('date-panel');
+      const btn = document.getElementById('date-slicer-btn');
+      if (!panel) return;
+      const open = panel.classList.contains('hidden');
+      closeStateSlicer();
+      closePeriodSlicer();
+      if (!open) { closeDateSlicer(); return; }
+
+      const from = document.getElementById('date-from');
+      const to = document.getElementById('date-to');
+      if (from) from.value = filters.dateFrom ? isoDay(filters.dateFrom) : '';
+      if (to) to.value = filters.dateTo ? isoDay(filters.dateTo) : '';
+
+      panel.classList.remove('hidden');
+      if (btn) btn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeDateSlicer() {
+      const panel = document.getElementById('date-panel');
+      const btn = document.getElementById('date-slicer-btn');
+      if (panel) panel.classList.add('hidden');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    // Each input commits on change, so the dashboard answers the moment a date
+    // is picked and the other end can still be set while the panel is open.
+    function applyDateRange() {
+      const fromEl = document.getElementById('date-from');
+      const toEl = document.getElementById('date-to');
+      let from = parseIsoDay(fromEl && fromEl.value);
+      let to = parseIsoDay(toEl && toEl.value);
+      if (from && to && from.getTime() > to.getTime()) {
+        const swap = from; from = to; to = swap;   // a backwards pick is a range
+        if (fromEl) fromEl.value = isoDay(from);
+        if (toEl) toEl.value = isoDay(to);
+      }
+      filters.dateFrom = from;
+      filters.dateTo = to;
+      if (rawRows.length) aggregate();
+      syncDateSlicer();
+    }
+
+    function clearDateRange() {
+      filters.dateFrom = null;
+      filters.dateTo = null;
+      const fromEl = document.getElementById('date-from');
+      const toEl = document.getElementById('date-to');
+      if (fromEl) fromEl.value = '';
+      if (toEl) toEl.value = '';
+      if (rawRows.length) aggregate();
+      syncDateSlicer();
+      closeDateSlicer();
     }
 
     // ------------------------------------------------------------------
@@ -3927,12 +4122,14 @@
       renderPeriodOptions();
       syncPeriodSlicer();
       buildYearOptions();
+      buildDateBounds();
       syncStateSlicer();
       // Keep whatever is typed in the state search while a refresh re-renders
       // the list underneath it.
       const stateSearch = document.getElementById('state-search');
       renderStateOptions(stateSearch ? stateSearch.value : '');
       aggregate();
+      syncDateSlicer();
 
       console.log('Loaded live records from Google Sheets:', rawRows.length);
     }
@@ -4310,6 +4507,14 @@
       if (filters.cycle !== 'all' && r._cycle !== filters.cycle) return false;
       if (!periodSelected(r._period)) return false;
       if (filters.year !== 'all' && (!r._date || String(r._date.getFullYear()) !== filters.year)) return false;
+      // The date range narrows both tables together, so the comparison on this
+      // page always covers the same span on each side.
+      if (filters.dateFrom || filters.dateTo) {
+        if (!r._date) return false;
+        const t = r._date.getTime();
+        if (filters.dateFrom && t < filters.dateFrom.getTime()) return false;
+        if (filters.dateTo && t > filters.dateTo.getTime() + 86399999) return false;
+      }
       if (filters.states && filters.states.indexOf(r._state) < 0) return false;
       return true;
     }
