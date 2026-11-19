@@ -399,7 +399,7 @@
       color: #F8FAFC;
       text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.85);
     }
-    .leaflet-tooltip.state-label { font-size: 8.5px; }
+    .leaflet-tooltip.state-label { font-size: 8.5px; line-height: 1.15; }
     /* Districts tile the map tightly, so a bare name sits on top of the
        boundary lines and reads as part of the clutter. A faint plate gives
        each name its own space without hiding the polygon under it. */
@@ -413,8 +413,7 @@
     .state-label .cnt, .lga-label .cnt {
       display: block; color: inherit; font-weight: inherit; font-size: inherit;
     }
-    .state-label .cnt.zero, .lga-label .cnt.zero { color: inherit; opacity: .7; }
-    .leaflet-container .state-shape { cursor: pointer; }
+    .state-label .cnt.zero, .lga-label .cnt.zero { color: inherit; opacity: .7; }    .leaflet-container .state-shape { cursor: pointer; }
     .leaflet-container .lga-shape { cursor: pointer; }
     .leaflet-tooltip.lga-tip { width: 200px; }
 
@@ -2024,21 +2023,36 @@
     const STATE_OFFSETS = [[0, 0], [0, -13], [0, 13], [-20, 0], [20, 0],
                            [-18, -12], [18, -12], [-18, 12], [18, 12],
                            [0, -27], [0, 27], [-34, -16], [34, -16]];
+    // Every southern state keeps its label. They are placed first so the large
+    // northern states, which have room to spare, give way rather than the
+    // crowded coast.
+    function isSouthernState(name) {
+      const zone = zoneOfState(name);
+      return zone === 'South East' || zone === 'South South' || zone === 'South West';
+    }
 
     // Label boxes are measured off a hidden copy of the label itself: canvas
     // text metrics ran a few pixels short of the rendered width, and binding a
     // tooltip per candidate (37 states x 13 offsets) stalled the map.
     let stateLabelProbe = null;
-    function measureStateLabel(name) {
+    // Every label is measured in one batch: writing and reading the probe per
+    // state forced a page reflow 37 times, which made each label pass take
+    // seconds.
+    function measureStateLabels(names) {
       if (!stateLabelProbe) {
         stateLabelProbe = document.createElement('div');
-        stateLabelProbe.className = 'leaflet-tooltip state-label';
         stateLabelProbe.style.cssText =
           'position:absolute;left:-9999px;top:0;visibility:hidden;';
         document.body.appendChild(stateLabelProbe);
       }
-      stateLabelProbe.innerHTML = buildMapLabel(name);
-      return { w: stateLabelProbe.offsetWidth + 2, h: stateLabelProbe.offsetHeight };
+      stateLabelProbe.innerHTML = names
+        .map(n => '<div class="leaflet-tooltip state-label">' + buildMapLabel(n) + '</div>')
+        .join('');
+      const kids = stateLabelProbe.children;
+      return names.map((n, i) => ({
+        w: kids[i].offsetWidth + 2,
+        h: kids[i].offsetHeight
+      }));
     }
 
     function bindStateLabel(layer, offset) {
@@ -2068,18 +2082,26 @@
         const name = canonicalState(layer.feature.properties.shapeName);
         const count = mapData().stateIncidents[name] || 0;
         const pt = map.latLngToContainerPoint(layer.getBounds().getCenter());
-        const size = measureStateLabel(name);
         cands.push({ layer: layer, name: name, count: count,
-                     x: pt.x, y: pt.y, w: size.w, h: size.h });
+                     x: pt.x, y: pt.y, w: 0, h: 0 });
       });
+      const sizes = measureStateLabels(cands.map(c => c.name));
+      cands.forEach((c, i) => { c.w = sizes[i].w; c.h = sizes[i].h; });
       // On equal counts the larger state goes first: it has more room to hold
       // a label, so the tie is settled by what can actually be read.
       const area = c => {
         const p = c.layer._path && c.layer._path.getBoundingClientRect();
         return p ? p.width * p.height : 0;
       };
-      cands.sort((a, b) => b.count - a.count || area(b) - area(a) ||
-                          a.name.localeCompare(b.name));
+      const south = c => isSouthernState(c.name) ? 1 : 0;
+      // Southern states claim their space before the north, and within the
+      // coast the tightest state picks first: the smallest outline has the
+      // fewest positions open to it, while Lagos or Oyo can shift a little.
+      cands.sort((a, b) => {
+        if (south(a) !== south(b)) return south(b) - south(a);
+        if (south(a)) return area(a) - area(b) || b.count - a.count;
+        return b.count - a.count || area(b) - area(a) || a.name.localeCompare(b.name);
+      });
 
       const placed = [];
       const fits = (x, y, w, h, inside) => {
@@ -2088,15 +2110,17 @@
         if (left < 2 || right > box.width - 2 ||
             top < 2 || bottom > box.height - 2) return false;
         if (!inside(x, y, w, h)) return false;
-        // One pixel is enough separation here: whatever is actually drawn is
-        // re-measured and thinned out once every label is in place.
-        return !placed.some(p => left < p.right + 1 && p.left < right + 1 &&
-                                 top < p.bottom + 1 && p.top < bottom + 1);
+        // Two pixels of separation: whatever is actually drawn is re-measured
+        // and thinned out once every label is in place, and a rendered box can
+        // come out a fraction wider than the one measured here.
+        return !placed.some(p => left < p.right + 2 && p.left < right + 2 &&
+                                 top < p.bottom + 2 && p.top < bottom + 2);
       };
 
       const chosenList = [];
       cands.forEach(c => {
         const path = c.layer._path;
+        const own = path && path.getBoundingClientRect();
         const svg = path && path.ownerSVGElement;
         const ctm = path && path.getScreenCTM ? path.getScreenCTM() : null;
         const inv = ctm && ctm.inverse ? ctm.inverse() : null;
@@ -2121,6 +2145,29 @@
         for (const off of STATE_OFFSETS) {
           if (fits(c.x + off[0], c.y + off[1], c.w, c.h, inside)) { chosen = off; break; }
         }
+        // Nothing wholly inside the state worked. A small state — every one on
+        // the coast, and the FCT — can be narrower than the word it carries, so
+        // the label is allowed to sit a little outside its own outline. Rings
+        // are walked outward nearest-first and the anchor loosens a step at a
+        // time, which names the crowded states without a name landing on
+        // another.
+        if (!chosen && own) {
+          for (let tol = 10; tol <= 40 && !chosen; tol += 10) {
+            for (let r = 0; r <= 56 && !chosen; r += 2) {
+              const steps = r ? 24 : 1;
+              for (let a = 0; a < steps && !chosen; a++) {
+                const ang = a * 2 * Math.PI / steps;
+                const dx = Math.round(Math.cos(ang) * r);
+                const dy = Math.round(Math.sin(ang) * r);
+                if (fits(c.x + dx, c.y + dy, c.w, c.h, (x, y) =>
+                      x > own.left - box.left - tol && x < own.right - box.left + tol &&
+                      y > own.top - box.top - tol && y < own.bottom - box.top + tol)) {
+                  chosen = [dx, dy];
+                }
+              }
+            }
+          }
+        }
         if (!chosen) { clearLgaLabel(c.layer); return; }
         bindStateLabel(c.layer, chosen);
         chosenList.push(c.layer);
@@ -2139,8 +2186,10 @@
         const el = tip && (tip.getElement ? tip.getElement() : null);
         const b = el && el.getBoundingClientRect();
         if (!b) return;
-        const clash = drawn.some(d => b.left < d.right && d.left < b.right &&
-                                      b.top < d.bottom && d.top < b.bottom);
+        // Only a real overlap counts: a pixel or two of contact is rounding,
+        // not two names on top of each other.
+        const clash = drawn.some(d => b.left < d.right - 2 && d.left < b.right - 2 &&
+                                      b.top < d.bottom - 2 && d.top < b.bottom - 2);
         if (clash) clearLgaLabel(layer); else drawn.push(b);
       });
 
