@@ -534,15 +534,16 @@
       font-size: 13px; font-weight: 600; letter-spacing: -.004em;
       text-transform: none; color: var(--hero-text);
     }
-    .hero .map-wrap { padding: 0 10px; }
-    .hero #map { height: clamp(300px, 34vw, 440px); border-radius: 10px; }
+    /* Edge to edge: the card's own radius clips the map's corners. */
+    .hero .map-wrap { padding: 0; }
+    .hero #map { height: clamp(300px, 34vw, 440px); border-radius: 0; }
     .hero .map-error { margin: 0 10px; }
 
     /* Floating legend, mirroring the choropleth breaks */
     .map-legend {
-      position: absolute; left: 18px; bottom: 14px; z-index: 800;
-      display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
-      padding: 7px 11px; border-radius: 9px;
+      position: absolute; left: 16px; bottom: 14px; z-index: 800;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 8px 9px 7px; border-radius: 9px;
       background: rgba(6,14,24,.82); border: 1px solid rgba(255,255,255,.13);
       backdrop-filter: blur(8px);
       font-size: 11px; font-weight: 600; color: #D7E3F1;
@@ -551,20 +552,22 @@
       width: 9px; height: 9px; border-radius: 2px; display: inline-block;
       margin-right: 5px; vertical-align: -1px;
     }
-    .legend-scale { display: inline-flex; align-items: center; gap: 7px; }
+    .legend-scale { display: flex; flex-direction: column; align-items: center; gap: 5px; }
     .legend-title {
       font-size: 10px; font-weight: 700; letter-spacing: .01em;
       text-transform: none; color: #94A9C2;
     }
     .legend-edge { font-variant-numeric: tabular-nums; }
-    /* Same four stops as RAMP in the script, so the key and the map agree. */
+    /* Same four stops as RAMP in the script, so the key and the map agree.
+       The key runs upward: low at the bottom, the busiest states at the top. */
     .legend-bar {
-      width: 116px; height: 8px; border-radius: 999px; display: inline-block;
-      background: linear-gradient(90deg,
-        #0D9488 0%, #D97706 38%, #EA580C 70%, #E11D48 100%);
+      width: 8px; height: 88px; border-radius: 999px; display: inline-block;
+      background: linear-gradient(180deg,
+        #E11D48 0%, #EA580C 30%, #D97706 62%, #0D9488 100%);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
     }
-    @media (max-width: 640px) { .legend-bar { width: 78px; } }
+    .legend-nodata { white-space: nowrap; }
+    @media (max-width: 640px) { .legend-bar { height: 64px; } }
 
     /* Second row: a narrow states panel beside a wide trend panel */
     .lower-grid {
@@ -748,7 +751,7 @@
       .kpi { padding: 9px 9px 10px; }
       .seg-btn { font-size: 8px; padding: 7px 4px; letter-spacing: .04em; }
       .hero-head { padding: 13px 14px 10px; }
-      .hero .map-wrap { padding: 0 8px; }
+      .hero .map-wrap { padding: 0; }
       .map-legend { left: 12px; bottom: 11px; gap: 8px; font-size: 9px; }
       .bar-row { grid-template-columns: minmax(64px, 46%) 1fr auto; gap: 8px; }
     }
@@ -1211,13 +1214,13 @@
             <div id="map"></div>
             <button id="map-back" onclick="zoomOut()" title="Return to the national view (Esc)">&#8592; NIGERIA</button>
             <div class="map-legend" aria-hidden="true">
+              <span class="legend-title">Incidents</span>
               <span class="legend-scale">
-                <span class="legend-title">Incidents</span>
-                <span class="legend-edge">0</span>
-                <span class="legend-bar"></span>
                 <span class="legend-edge" id="legend-max">0</span>
+                <span class="legend-bar"></span>
+                <span class="legend-edge">0</span>
               </span>
-              <span><i style="background:#1E293B"></i>No data</span>
+              <span class="legend-nodata"><i style="background:#1E293B"></i>No data</span>
             </div>
           </div>
           <div id="map-error" class="map-error hidden">
