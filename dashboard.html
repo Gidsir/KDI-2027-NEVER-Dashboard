@@ -1000,17 +1000,33 @@
       #page-threats .page-inner > section.card .table-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
       #page-threats .page-inner > section.card thead th { position: sticky; top: 0; z-index: 2; }
 
-      /* Tension: five bands, each sized by the window, each scrolling inside. */
-      /* Tension carries five bands and a matrix; squeezed below about 800px
-         of window the table collapses, so the bands keep their natural height
-         and the page scrolls the little that is left over. */
+      /* Tension carries five bands and a twelve-column matrix. Each band takes
+         a share of the window and scrolls inside its own card, so the page
+         itself never scrolls. */
       #page-tension .page-inner {
         display: grid;
-        grid-template-rows: auto auto minmax(240px, 1fr) auto auto;
-        height: auto; min-height: 100%;
+        grid-template-rows: auto auto minmax(0, 1.05fr) minmax(0, 1.3fr) minmax(0, .95fr);
+        height: 100%; min-height: 0; overflow: hidden;
       }
+      /* The four figures run as one inline row here, as on the Threat page. */
+      #page-tension .kpi { display: flex; align-items: baseline; gap: 9px; padding: 6px 12px 7px; }
+      #page-tension .kpi-value { margin: 0; font-size: 21px; }
+      #page-tension .kpi-label { margin: 0; white-space: nowrap; }
+      #page-tension .kpi-sub { display: none; }
+      /* Tighter cards and a smaller level switch leave the matrix more room
+         for rows inside the same band. */
+      #page-tension .card { padding: 10px 12px 11px; }
+      #page-tension .card-head .seg { padding: 2px; gap: 3px; }
+      #page-tension .card-head .seg-btn { padding: 3px 9px; font-size: 11px; }
       #page-tension .page-inner > * { margin-bottom: 0; }
-      #page-tension .grid-2 { grid-template-rows: minmax(0, 1fr); }
+      #page-tension .grid-2 { grid-template-rows: minmax(0, 1fr); min-height: 0; }
+      #page-tension .grid-2 > .card { min-height: 0; }
+      #page-tension .tension-three { min-height: 0; }
+      /* The matrix keeps its numbers and drops the running commentary beside
+         the level switch; the note below the table carries the essentials. */
+      #page-tension > .wrap > section.card .card-hint { display: none; }
+      #page-tension .matrix-table th,
+      #page-tension .matrix-table td { padding-top: 3px; padding-bottom: 3px; }
       #page-tension .chart-card .trend-box { height: auto; min-height: 0; }
       #page-tension .page-inner > section.card { display: flex; flex-direction: column; }
       #page-tension .page-inner > section.card .table-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
@@ -2002,6 +2018,145 @@
              '<span class="' + cls + '">' + incidents.toLocaleString() + '</span>';
     }
 
+    const STATE_OFFSETS = [[0, 0], [0, -13], [0, 13], [-20, 0], [20, 0],
+                           [-18, -12], [18, -12], [-18, 12], [18, 12],
+                           [0, -27], [0, 27], [-34, -16], [34, -16]];
+
+    // Label boxes are measured off a hidden copy of the label itself: canvas
+    // text metrics ran a few pixels short of the rendered width, and binding a
+    // tooltip per candidate (37 states x 13 offsets) stalled the map.
+    let stateLabelProbe = null;
+    function measureStateLabel(name) {
+      if (!stateLabelProbe) {
+        stateLabelProbe = document.createElement('div');
+        stateLabelProbe.className = 'leaflet-tooltip state-label';
+        stateLabelProbe.style.cssText =
+          'position:absolute;left:-9999px;top:0;visibility:hidden;';
+        document.body.appendChild(stateLabelProbe);
+      }
+      stateLabelProbe.innerHTML = buildMapLabel(name);
+      return { w: stateLabelProbe.offsetWidth + 2, h: stateLabelProbe.offsetHeight };
+    }
+
+    function bindStateLabel(layer, offset) {
+      clearLgaLabel(layer);
+      layer.bindTooltip(buildMapLabel(layer.feature.properties.shapeName), {
+        permanent: true, direction: 'center', className: 'state-label',
+        opacity: 1, offset: offset
+      });
+    }
+
+    // Place the national labels greedily instead of at a fixed centre. The
+    // southern states are small at national zoom, so centred labels overlapped
+    // in 24 pairs (Lagos over Ogun, Imo over Abia, Ondo over Osun). Busiest
+    // state wins the space; a label that cannot clear its neighbours tries a
+    // short offset, and one with no room is dropped — its hover card still
+    // names it. Pixel geometry changes with the scale, so this runs again on
+    // every zoom, pan, resize and data refresh.
+    function layoutStateLabels() {
+      if (!geoLayer || !map.hasLayer(geoLayer)) return;
+      const box = map.getContainer().getBoundingClientRect();
+      // A hidden page has no geometry to place against, and clearing labels
+      // here would leave the map empty until the next event.
+      if (!box.width || !box.height) return;
+
+      const cands = [];
+      geoLayer.eachLayer(layer => {
+        const name = canonicalState(layer.feature.properties.shapeName);
+        const count = mapData().stateIncidents[name] || 0;
+        const pt = map.latLngToContainerPoint(layer.getBounds().getCenter());
+        const size = measureStateLabel(name);
+        cands.push({ layer: layer, name: name, count: count,
+                     x: pt.x, y: pt.y, w: size.w, h: size.h });
+      });
+      // On equal counts the larger state goes first: it has more room to hold
+      // a label, so the tie is settled by what can actually be read.
+      const area = c => {
+        const p = c.layer._path && c.layer._path.getBoundingClientRect();
+        return p ? p.width * p.height : 0;
+      };
+      cands.sort((a, b) => b.count - a.count || area(b) - area(a) ||
+                          a.name.localeCompare(b.name));
+
+      const placed = [];
+      const fits = (x, y, w, h, inside) => {
+        const left = x - w / 2, right = x + w / 2;
+        const top = y - h / 2, bottom = y + h / 2;
+        if (left < 2 || right > box.width - 2 ||
+            top < 2 || bottom > box.height - 2) return false;
+        if (!inside(x, y, w, h)) return false;
+        // One pixel is enough separation here: whatever is actually drawn is
+        // re-measured and thinned out once every label is in place.
+        return !placed.some(p => left < p.right + 1 && p.left < right + 1 &&
+                                 top < p.bottom + 1 && p.top < bottom + 1);
+      };
+
+      const chosenList = [];
+      cands.forEach(c => {
+        const path = c.layer._path;
+        const svg = path && path.ownerSVGElement;
+        const ctm = path && path.getScreenCTM ? path.getScreenCTM() : null;
+        const inv = ctm && ctm.inverse ? ctm.inverse() : null;
+
+        // isPointInFill wants an SVGPoint in the element's own user space.
+        const hit = (x, y) => {
+          if (!path || !inv || !svg || typeof path.isPointInFill !== 'function') return true;
+          const pt = svg.createSVGPoint();
+          pt.x = box.left + x;
+          pt.y = box.top + y;
+          return path.isPointInFill(pt.matrixTransform(inv));
+        };
+        // Three of five sample points have to sit on the state for the label
+        // to read as its own. Requiring the centre alone refused Lagos, whose
+        // centre falls in the lagoon between its islands.
+        const inside = (x, y, w, h) =>
+          (hit(x, y) ? 1 : 0) + (hit(x - w / 4, y) ? 1 : 0) +
+          (hit(x + w / 4, y) ? 1 : 0) + (hit(x, y - h / 4) ? 1 : 0) +
+          (hit(x, y + h / 4) ? 1 : 0) >= 3;
+
+        let chosen = null;
+        for (const off of STATE_OFFSETS) {
+          if (fits(c.x + off[0], c.y + off[1], c.w, c.h, inside)) { chosen = off; break; }
+        }
+        if (!chosen) { clearLgaLabel(c.layer); return; }
+        bindStateLabel(c.layer, chosen);
+        chosenList.push(c.layer);
+        placed.push({
+          left: c.x + chosen[0] - c.w / 2, right: c.x + chosen[0] + c.w / 2,
+          top: c.y + chosen[1] - c.h / 2, bottom: c.y + chosen[1] + c.h / 2
+        });
+      });
+
+      // Final guard. Placement works on measured boxes, and a rendered label
+      // can come out a pixel wider; whatever was actually drawn is checked
+      // here, and the lower-priority state of any clashing pair gives way.
+      const drawn = [];
+      chosenList.forEach(layer => {
+        const tip = layer.getTooltip();
+        const el = tip && (tip.getElement ? tip.getElement() : null);
+        const b = el && el.getBoundingClientRect();
+        if (!b) return;
+        const clash = drawn.some(d => b.left < d.right && d.left < b.right &&
+                                      b.top < d.bottom && d.top < b.bottom);
+        if (clash) clearLgaLabel(layer); else drawn.push(b);
+      });
+
+      // Only nodes bound to a layer belong in the pane; a leftover from an
+      // earlier pass would draw a second copy of a label already on the map.
+      const pane = map.getPane('tooltipPane');
+      if (pane) {
+        const live = new Set();
+        geoLayer.eachLayer(l => {
+          const t = l.getTooltip();
+          const el = t && t.getElement && t.getElement();
+          if (el) live.add(el);
+        });
+        pane.querySelectorAll('.state-label').forEach(el => {
+          if (!live.has(el)) el.remove();
+        });
+      }
+    }
+
     // Hover card. Four short lines: how much happened, how severe that is on
     // one 0–100 score, then the dominant form, actor and target — the same
     // "dominant" answers the bar cards give, but for this state alone.
@@ -2075,6 +2230,7 @@
           });
           layer.setTooltipContent(buildMapLabel(layer.feature.properties.shapeName));
         });
+        layoutStateLabels();
       }
       refreshLgaMap();
     }
@@ -2529,7 +2685,9 @@
 
     // Label placement is a function of pixel geometry, so redo it whenever
     // the scale changes (and after pan, so nothing sits off-screen).
-    map.on('zoomend moveend', () => { if (drilledState) layoutLgaLabels(); });
+    map.on('zoomend moveend', () => {
+      if (drilledState) layoutLgaLabels(); else layoutStateLabels();
+    });
 
     // Esc backs out of the drilldown, matching the on-map button.
     document.addEventListener('keydown', e => {
@@ -2800,7 +2958,10 @@
         let mapTimer = null;
         new ResizeObserver(() => {
           clearTimeout(mapTimer);
-          mapTimer = setTimeout(() => map.invalidateSize(), 120);
+          mapTimer = setTimeout(() => {
+            map.invalidateSize();
+            if (drilledState) layoutLgaLabels(); else layoutStateLabels();
+          }, 120);
         }).observe(mapBox);
       }
     }
@@ -4514,7 +4675,7 @@
       }
 
       if (note) {
-        note.textContent = Object.keys(units).length + ' ' + unitWord + ' in this selection. ' +
+        const full = Object.keys(units).length + ' ' + unitWord + ' in this selection. ' +
           'A cell counts incidents of that violence form recorded in ' + unitWord +
           ' that also reported the threat form. The badge beside a row is how many ' +
           unitSingular + 's reported it, and the last column totals the violence forms shown, ' +
@@ -4528,6 +4689,12 @@
           'totals, so it tells you where it is absent from nothing — switch level for contrast. ' +
           'Click a row to narrow the threat figures, a column to narrow the violence figures, ' +
           'or a cell for both; the same pick again clears it.';
+        // The card is short on a laptop, so the two facts that keep the
+        // numbers from being misread stay visible and the rest is on hover.
+        note.textContent = Object.keys(units).length + ' ' + unitWord + ' in this selection. ' +
+          'Cells overlap: a ' + unitSingular + ' reporting several threat forms appears in ' +
+          'several rows, so they do not sum. Click a row, column or cell to filter.';
+        note.title = full;
       }
     }
 
