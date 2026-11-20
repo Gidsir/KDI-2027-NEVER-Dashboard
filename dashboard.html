@@ -1017,10 +1017,8 @@
       .insight .bar-rows { overflow-y: auto; scrollbar-width: thin; }
       .insight > .card:last-child { overflow: hidden; }
 
-      /* Threat: summary strip, three lists, then the signals table. */
-      #page-threats .page-inner { display: grid; grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.3fr); }
-      #page-threats .grid-3 > .card { overflow: hidden; }
-      #page-threats .grid-3 .bar-rows { overflow-y: auto; }
+      /* Threat: summary strip, then the signals table across the page. */
+      #page-threats .page-inner { display: grid; grid-template-rows: auto minmax(0, 1fr); }
       #page-threats .page-inner > section.card { display: flex; flex-direction: column; }
       #page-threats .page-inner > section.card .table-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
       #page-threats .page-inner > section.card thead th { position: sticky; top: 0; z-index: 2; }
@@ -1358,29 +1356,6 @@
   <main id="page-threats" class="page hidden">
     <div class="wrap page-inner">
       <div id="kpi-slot-threats"></div>
-
-      <div class="grid-3">
-        <section class="card">
-          <div class="card-head">
-            <h2 class="card-title">Forms of violence</h2>
-          </div>
-          <div class="bar-rows" id="formsRows"></div>
-        </section>
-
-        <section class="card">
-          <div class="card-head">
-            <h2 class="card-title">Perpetrator categories</h2>
-          </div>
-          <div class="bar-rows" id="perpsRows"></div>
-        </section>
-
-        <section class="card">
-          <div class="card-head">
-            <h2 class="card-title">Victim categories</h2>
-          </div>
-          <div class="bar-rows" id="victimsRows"></div>
-        </section>
-      </div>
 
       <section class="card">
         <div class="card-head">
@@ -2969,24 +2944,6 @@
       renderActorRows();
     }
 
-    // Page two uses the same list treatment for forms and perpetrators.
-    function renderListPage() {
-      const forms = topEntries(aggOf(['form']).formCounts, 9);
-      barRows(document.getElementById('formsRows'),
-        forms.map(([k, v]) => ({ key: k, label: k, value: v, selected: sel.form === k })),
-        { onPick: k => setSel('form', k), hasSelection: !!sel.form });
-
-      const perps = topEntries(aggOf(['perp']).perpCounts, 9);
-      barRows(document.getElementById('perpsRows'),
-        perps.map(([k, v]) => ({ key: k, label: k, value: v, selected: sel.perp === k })),
-        { onPick: k => setSel('perp', k), hasSelection: !!sel.perp });
-
-      const victims = topEntries(aggOf(['victim']).victimCounts, 9);
-      barRows(document.getElementById('victimsRows'),
-        victims.map(([k, v]) => ({ key: k, label: k, value: v, selected: sel.victim === k })),
-        { onPick: k => setSel('victim', k), hasSelection: !!sel.victim });
-    }
-
     // ============================================================
     // 4b. Trend — the only canvas left
     // ============================================================
@@ -3078,7 +3035,6 @@
     function updateCharts() {
       renderZoneRows();
       renderActorRows();
-      renderListPage();
       updateTrendChart();
       renderCrossfilterBar();
       renderSignalsTable();
