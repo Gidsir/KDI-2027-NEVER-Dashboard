@@ -1826,11 +1826,12 @@
     // ============================================================
     // 2. Leaflet Map Initialization
     // ============================================================
-    // Fractional zoom: a single geopolitical zone only fits at ~6.7 on this
-    // canvas, and whole-number snapping rounded that back to the national 6,
-    // so selecting a zone did not visibly zoom at all.
+    // Continuous zoom (zoomSnap 0): fitBounds is only as tight as the snap it
+    // rounds down to, so any snapping left the national frame floating with a
+    // margin instead of filling the canvas. It also keeps a zone's ~6.7 fit
+    // from rounding back to the national zoom.
     const map = L.map('map', {
-      zoomControl: true, zoomSnap: 0.25, zoomDelta: 0.5,
+      zoomControl: true, zoomSnap: 0, zoomDelta: 0.5,
       attributionControl: false   // no tile provider to credit
     }).setView([9.0820, 8.6753], 6);
 
@@ -2050,9 +2051,11 @@
           }
         }).addTo(map);
 
-        // Frame the map around Nigeria's actual extent, then paint once the
-        // layer exists so the ramp and its legend span the real maximum.
-        fitBoundsRobust(geoLayer.getBounds().pad(0.1));
+        // Frame the map flush against Nigeria's actual extent — no padding
+        // ring, so the country fills the canvas instead of floating inside it
+        // — then paint once the layer exists so the ramp and its legend span
+        // the real maximum.
+        fitBoundsRobust(geoLayer.getBounds());
         refreshMap();
       })
       .catch(() => { /* loadGeoJson already surfaced the error banner */ });
@@ -2759,7 +2762,7 @@
 
       if (geoLayer) {
         if (!map.hasLayer(geoLayer)) geoLayer.addTo(map);
-        fitBoundsRobust(geoLayer.getBounds().pad(0.1));
+        fitBoundsRobust(geoLayer.getBounds());
       }
 
       document.getElementById('map-back').classList.remove('on');
@@ -2919,7 +2922,7 @@
         // Selecting frames the area on the map; clearing the selection leaves
         // the view alone, except at zone level where it returns to Nigeria.
         if (wasSelected) {
-          if (!byDistrict && geoLayer) fitBoundsRobust(geoLayer.getBounds().pad(0.1));
+          if (!byDistrict && geoLayer) fitBoundsRobust(geoLayer.getBounds());
           return;
         }
         if (byDistrict) fitToDistrict(sel.state, key);
@@ -3240,7 +3243,7 @@
           // Dropping the zone filter puts the map back to the national frame,
           // the same as clicking the zone row off.
           if (hadZone && geoLayer && !drilledState) {
-            fitBoundsRobust(geoLayer.getBounds().pad(0.1));
+            fitBoundsRobust(geoLayer.getBounds());
           }
         };
         box.appendChild(chip);
@@ -3255,7 +3258,7 @@
           Object.keys(sel).forEach(k => { sel[k] = null; });
           updateView();
           if (hadZone && geoLayer && !drilledState) {
-            fitBoundsRobust(geoLayer.getBounds().pad(0.1));
+            fitBoundsRobust(geoLayer.getBounds());
           }
         };
         box.appendChild(clear);
