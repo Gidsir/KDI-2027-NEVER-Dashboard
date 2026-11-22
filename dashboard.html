@@ -6058,6 +6058,7 @@
     const FINANCE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTnI2R2y_0L42uHytBcnqtN1z0caqCDzwg8Ah35UeMpOrUqQcKM85HQbLqqIaLUCEg0ofW1DjLiXxHz/pub?gid=1420788236&single=true&output=csv";
 
     let financeRows = [];        // { party, candidate, vis }
+    let lastFinanceText = null;  // unchanged bytes: skip the rebuild
     let financeLoaded = false;
     let financeFailed = false;   // fetch or parse failed; say so instead of "loading"
     let financeView = 'trouble'; // 'trouble' | 'visibility'
@@ -6101,16 +6102,21 @@
       renderFinance();
     }
 
-    function loadFinance() {
-      fetchText(FINANCE_SHEET_CSV, false)
+    function loadFinance(done) {
+      fetchText(FINANCE_SHEET_CSV, true)
         .then(text => {
+          // The two-minute refresh usually returns the same bytes; rebuilding
+          // would reset the ranking's scroll position for no new numbers.
+          if (text === lastFinanceText && financeRows.length) return;
           ingestFinance(Papa.parse(text, { skipEmptyLines: true }).data);
+          lastFinanceText = text;
         })
         .catch(err => {
           financeFailed = true;
           console.warn('Party finance sheet unavailable:', err);
           renderFinance();
-        });
+        })
+        .finally(() => { if (done) done(); });
     }
 
     // Everything the page needs in one pass: finance rows left-joined to the
@@ -7417,7 +7423,7 @@
 
     // ---- auto refresh -------------------------------------------------
     // The sheets are the source of truth, so an open tab re-reads the violence
-    // log and the PESEA monitor every two minutes and whenever it comes back
+    // log, the PESEA monitor and the party-finance filing every two minutes and whenever it comes back
     // into view. Nothing here needs a redeploy; a background tab is left alone,
     // and the guard stops a slow read from stacking another on top of it.
     const REFRESH_MS = 120000;
@@ -7429,10 +7435,11 @@
       if (refreshing || document.visibilityState === 'hidden') return;
       refreshing = true;
       lastRefreshAt = Date.now();
-      let pending = 2;
+      let pending = 3;
       const done = () => { if (--pending <= 0) refreshing = false; };
       loadViolenceData(done);
       loadPcData(done);
+      loadFinance(done);
     }
 
     function refreshIfStale() {
