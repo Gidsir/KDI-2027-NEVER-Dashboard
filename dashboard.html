@@ -194,6 +194,41 @@
     .tab:hover { color: var(--text); }
     .tab.is-active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.07); }
 
+    /* The Analysis tab is a menu of its pages: a click opens the chapter list. */
+    .tab-menu { position: relative; }
+    .tab-caret { display: inline-flex; align-items: center; gap: 5px; }
+    .tab-caret .caret { font-size: 8px; line-height: 1; transition: transform .15s; }
+    .tab-menu.is-open .tab-caret .caret { transform: rotate(180deg); }
+    .tab-menu-list {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+      min-width: 330px; max-width: min(430px, calc(100vw - 24px));
+      padding: 5px; border-radius: 11px;
+      background: var(--surface); border: 1px solid var(--border);
+      box-shadow: 0 14px 34px rgba(0,0,0,.24);
+    }
+    .tab-menu.is-open .tab-menu-list { display: block; }
+    .tab-menu-item {
+      appearance: none; display: block; width: 100%;
+      border: 0; background: transparent; cursor: pointer; font-family: inherit;
+      text-align: left; font-size: 12.5px; font-weight: 600; color: var(--text-2);
+      padding: 8px 10px; border-radius: 7px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: background .12s, color .12s;
+    }
+    .tab-menu-item:hover { background: var(--surface-2); color: var(--text); }
+    .tab-menu-item.is-current { color: var(--accent); background: var(--accent-soft); }
+    .tab-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    /* On phones the list spans the tab bar instead of hanging off one tab. */
+    @media (max-width: 640px) {
+      .tabs { position: relative; }
+      .tab-menu { position: static; }
+      .tab-menu-list {
+        left: 0; right: 0; top: calc(100% + 6px);
+        min-width: 0; max-width: none;
+      }
+      .tab-menu-item { white-space: normal; line-height: 1.3; }
+    }
+
     .theme-toggle {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 8px 11px; border-radius: 10px; cursor: pointer;
@@ -1094,12 +1129,63 @@
       .ew-tile:nth-child(-n+2) { border-top: 0; }
     }
 
-    /* The chart card owns the band's height and the canvas fills it. */
-    .ew-chart { display: flex; flex-direction: column; min-height: 0; }
-    .ew-chart .ew-box { flex: 1 1 auto; min-height: 0; height: auto; position: relative; margin-top: 2px; }
-    /* The dimension control belongs on the title line, not under the subtitle. */
-    #page-tension .ew-chart .card-head .card-hint { flex-basis: auto; margin-right: auto; }
-    #page-tension .ew-chart .card-head .ew-dim-field { margin-left: 0; }
+    /* The chart card owns the band's height; the heat grid scrolls inside it. */
+    .ew-chart { display: flex; flex-direction: column; min-height: 0; --ew-name: 220px; }
+    .ew-chart .ew-rows { flex: 1 1 auto; min-height: 0; margin-top: 2px; }
+    .ew-rows {
+      max-height: 470px; overflow-y: auto; overflow-x: hidden;
+      scrollbar-width: thin;
+    }
+    .ew-heat-head, .ew-heat-row { display: grid; gap: 1px; align-items: center; }
+    .ew-heat-head {
+      position: sticky; top: 0; z-index: 2;
+      background: var(--surface);
+      font-size: 9px; font-weight: 700; color: var(--text-3);
+    }
+    .ew-heat-head span { text-align: center; white-space: nowrap; padding: 3px 0 4px; }
+    .ew-heat-head .ew-heat-name { text-align: left; }
+    .ew-heat-head .ew-heat-last { text-align: right; padding-right: 2px; }
+    .ew-heat-row { margin-bottom: 1px; border-radius: 5px; }
+    .ew-heat-name-cell {
+      display: flex; align-items: center; gap: 6px; min-width: 0;
+      height: 22px; padding: 0 6px 0 2px;
+      font-size: 10px; font-weight: 700; color: var(--text);
+      text-align: left;
+    }
+    .ew-heat-row.is-ind .ew-heat-name-cell {
+      padding-left: 12px; font-weight: 600; color: var(--text-3);
+    }
+    button.ew-heat-name-cell {
+      appearance: none; background: none; border: 0; border-radius: 5px;
+      font-family: inherit; cursor: pointer; width: 100%;
+    }
+    button.ew-heat-name-cell:hover { background: var(--surface-2); }
+    button.ew-heat-name-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .ew-chev { font-size: 8px; color: var(--text-3); flex: 0 0 auto; }
+    .ew-heat-name {
+      min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ew-heat-cell {
+      height: 22px; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10.5px; font-weight: 700; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .ew-heat-cell.is-empty { background: var(--surface-2); color: var(--text-3); font-weight: 600; }
+    .ew-heat-last {
+      text-align: right; padding-right: 2px;
+      font-size: 10px; font-weight: 800; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .ew-heat-head .ew-traj-head { text-align: right; padding-right: 2px; }
+    .ew-traj {
+      text-align: right; padding-right: 2px;
+      font-size: 9.5px; font-weight: 800; white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .ew-traj.is-up { color: var(--danger); }
+    .ew-traj.is-down { color: var(--ok); }
+    .ew-traj.is-flat { color: var(--text-3); }
     .ew-dim-field { margin-left: auto; display: flex; align-items: center; gap: 7px; }
     .ew-dim-field > span { font-size: 10.5px; font-weight: 700; color: var(--text-3); white-space: nowrap; }
     .ew-dim-field .slicer-select { padding: 4px 26px 4px 9px; font-size: 11.5px; }
@@ -1283,7 +1369,7 @@
 
       /* Overview: map and summary rail above, zones and trend below. */
       #page-overview .page-inner { display: grid; grid-template-rows: minmax(0, 1fr); }
-      .overview-grid { height: 100%; grid-template-rows: minmax(0, 1.45fr) minmax(0, 1fr); }
+      .overview-grid { height: 100%; grid-template-rows: minmax(0, 0.9fr) minmax(0, 1fr); }
       .hero { display: flex; flex-direction: column; min-height: 0; }
       .hero .map-wrap { display: flex; flex: 1 1 auto; min-height: 0; }
       .hero #map { flex: 1 1 auto; height: auto; min-height: 200px; }
@@ -1357,34 +1443,6 @@
       .hero-head { padding: 9px 14px 6px; }
       .page { padding: 8px 0 10px; }
     }
-    /* =====================================================================
-       ANALYSIS — five steps, one chapter at a time. The segmented control
-       swaps the chapter in place: there is no story to scroll through.
-       ===================================================================== */
-    .analysis-steps {
-      position: sticky; top: 0; z-index: 8;
-      background: var(--bg); border-bottom: 1px solid var(--border);
-      padding: 8px 0 9px; margin: -6px 0 12px;
-    }
-    .analysis-steps-inner { display: flex; align-items: center; gap: 10px; }
-    .step-label {
-      font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
-      text-transform: uppercase; color: var(--text-3); white-space: nowrap;
-    }
-    .step-select {
-      appearance: none; -webkit-appearance: none; cursor: pointer;
-      flex: 0 1 540px; min-width: 0; width: 100%;
-      border: 1px solid var(--border); border-radius: 999px;
-      background-color: var(--surface);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 14px center; background-size: 11px 8px;
-      color: var(--text); font-family: inherit; font-size: 12.5px; font-weight: 600;
-      padding: 8px 34px 8px 14px; box-shadow: var(--shadow);
-      text-overflow: ellipsis;
-    }
-    .step-select:hover { border-color: var(--border-2); }
-    .step-select:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent-soft); outline-offset: 1px; }
-
     #page-analysis { padding-top: 0; }
     #page-analysis { padding-top: 0; }
     #page-analysis .page-inner { height: auto; }
@@ -1415,10 +1473,13 @@
     #chapter-tension .tension-view { display: grid; gap: 12px; align-content: start; }
     #chapter-tension .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     @media (min-width: 860px) {
-      #chapter-tension .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      #chapter-tension .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    /* Three figures: stacked two-up, the last one takes the full width. */
+    @media (max-width: 859px) {
+      #chapter-tension .kpi-grid .kpi:last-child { grid-column: 1 / -1; }
     }
     #chapter-tension .ew-chart { display: flex; flex-direction: column; }
-    #chapter-tension .ew-box { height: 300px; min-height: 300px; }
 
     /* 01 Pressure, plain figures: one type scale and no accent colour, so the
        numbers read as data rather than as alerts. */
@@ -1461,7 +1522,6 @@
        the normal document scroll. */
     @media (min-width: 1024px) and (min-height: 640px) {
       #page-analysis { display: flex; flex-direction: column; overflow: hidden; }
-      #page-analysis .analysis-steps { flex: 0 0 auto; position: static; }
       #page-analysis .story-chapter.is-active { flex: 1 1 auto; min-height: 0; }
       #page-analysis .story-chapter.is-active > .page-inner {
         height: 100%; min-height: 0; overflow-y: auto; scrollbar-width: thin;
@@ -1481,8 +1541,11 @@
       #chapter-tension .chapter-lede { display: none; }
       #chapter-tension .kpi-grid { flex: 0 0 auto; }
       #chapter-tension .ew-watch { flex: 0 0 auto; }
-      #chapter-tension .tension-view.is-ew { flex: 0 0 auto; grid-template-rows: auto auto 240px; }
-      #chapter-tension .ew-box { height: 240px; min-height: 240px; }
+      #chapter-tension .tension-view.is-ew {
+        flex: 1 1 auto; min-height: 320px;
+        grid-template-rows: auto auto 340px;
+      }
+      #chapter-tension .ew-rows { max-height: none; }
       #chapter-tension .ew-note { display: none; }
 
       /* 02 Who acts: one long list takes the window and scrolls inside. */
@@ -1523,7 +1586,21 @@
       <div class="header-right">
         <nav class="tabs" aria-label="Dashboard pages">
           <button class="tab is-active" id="tab-overview" onclick="switchTab('overview')">Overview</button>
-          <button class="tab" id="tab-analysis" onclick="switchTab('analysis')">Analysis</button>
+          <div class="tab-menu" id="analysis-menu">
+            <button class="tab tab-caret" id="tab-analysis" aria-haspopup="menu"
+                    aria-expanded="false" aria-controls="analysis-pages"
+                    onclick="toggleAnalysisMenu(event)">Analysis <span class="caret" aria-hidden="true">&#9662;</span></button>
+            <div class="tab-menu-list" id="analysis-pages" role="menu" aria-label="Analysis pages">
+              <button type="button" role="menuitem" class="tab-menu-item is-current"
+                      data-chapter="chapter-tension" onclick="openChapter('chapter-tension')">01 &middot; Early warning signals</button>
+              <button type="button" role="menuitem" class="tab-menu-item"
+                      data-chapter="chapter-actors" onclick="openChapter('chapter-actors')">02 &middot; Actor&ndash;action dynamics by state</button>
+              <button type="button" role="menuitem" class="tab-menu-item"
+                      data-chapter="chapter-compare" onclick="openChapter('chapter-compare')">03 &middot; All state comparison</button>
+              <button type="button" role="menuitem" class="tab-menu-item"
+                      data-chapter="chapter-money" onclick="openChapter('chapter-money')">04 &middot; Political parties visibility and allegations of violence</button>
+            </div>
+          </div>
         </nav>
 
         <button class="theme-toggle" id="theme-toggle" type="button" onclick="toggleTheme()"
@@ -1764,20 +1841,6 @@
   <!-- ===================================================================== -->
   <main id="page-analysis" class="page hidden">
 
-    <nav class="analysis-steps" aria-label="Analysis steps">
-      <div class="wrap">
-        <div class="analysis-steps-inner">
-          <label class="step-label" for="stepSelect">Step</label>
-          <select id="stepSelect" class="step-select" aria-label="Analysis step" onchange="setChapter(this.value)">
-            <option value="chapter-tension" selected>01 &middot; Early warning signals</option>
-            <option value="chapter-actors">02 &middot; Actor&ndash;action dynamics by state</option>
-            <option value="chapter-compare">03 &middot; All state comparison</option>
-            <option value="chapter-money">04 &middot; Political parties visibility and allegations of violence</option>
-          </select>
-        </div>
-      </div>
-    </nav>
-
     <!-- 1. PRESSURE AND PLACES ------------------------------------------- -->
     <section class="story-chapter is-active" id="chapter-tension">
       <div class="wrap page-inner">
@@ -1800,11 +1863,6 @@
               <p class="kpi-value" id="ew-reports">&mdash;</p>
               <p class="kpi-label">PESEA reports</p>
               <p class="kpi-sub" id="ew-reports-sub">Peace Committee monitors</p>
-            </article>
-            <article class="kpi is-danger">
-              <p class="kpi-value" id="ew-signals">&mdash;</p>
-              <p class="kpi-label">Signals up</p>
-              <p class="kpi-sub" id="ew-signals-sub">Risk-positive checklist answers</p>
             </article>
             <article class="kpi">
               <p class="kpi-value" id="ew-week">&mdash;</p>
@@ -1829,13 +1887,9 @@
           <section class="card ew-chart">
             <div class="card-head">
               <h2 class="card-title">Early warning, week by week</h2>
-              <span class="card-hint" id="ew-hint">Share of each week's reports flagging the signal</span>
-              <label class="ew-dim-field">
-                <span>Dimension</span>
-                <select class="slicer-select" id="ew-dim" aria-label="Early warning dimension"></select>
-              </label>
+              <span class="card-hint" id="ew-hint">Share of each week's answers that raise a warning</span>
             </div>
-            <div class="trend-box ew-box"><canvas id="ewTrend"></canvas></div>
+            <div class="ew-rows" id="ewRows"></div>
             <p class="muted ew-note" id="ew-note"></p>
           </section>
 
@@ -2284,7 +2338,7 @@
       const v = n => s.getPropertyValue(n).trim();
       return {
         text: v('--text'), text2: v('--text-2'), text3: v('--text-3'),
-        grid: v('--grid'), accent: v('--accent'), danger: v('--danger'),
+        grid: v('--grid'), accent: v('--accent'), danger: v('--danger'), ok: v('--ok'),
         tooltipBg: v('--surface-2'),
         series: [v('--s1'), v('--s2'), v('--s3'), v('--s4'), v('--s5'), v('--s6'), v('--s7')]
       };
@@ -2541,8 +2595,11 @@
         const el = document.getElementById(key);
         if (el) el.classList.toggle('is-active', key === id);
       });
-      const select = document.getElementById('stepSelect');
-      if (select && select.value !== id) select.value = id;
+      document.querySelectorAll('.tab-menu-item').forEach(el => {
+        const on = el.dataset.chapter === id;
+        el.classList.toggle('is-current', on);
+        el.setAttribute('aria-current', on ? 'page' : 'false');
+      });
       const page = document.getElementById('page-analysis');
       if (page) page.scrollTop = 0;
       resizeCharts();
@@ -2550,11 +2607,46 @@
       setTimeout(() => { resizeCharts(); rebuildStuckCharts(); }, 120);
     }
 
+    // The Analysis tab lists its pages: pick one and that chapter opens.
+    function setAnalysisMenu(open) {
+      const menu = document.getElementById('analysis-menu');
+      const btn = document.getElementById('tab-analysis');
+      if (!menu || !btn) return;
+      menu.classList.toggle('is-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function closeAnalysisMenu() { setAnalysisMenu(false); }
+
+    function toggleAnalysisMenu(event) {
+      if (event) event.stopPropagation();
+      const menu = document.getElementById('analysis-menu');
+      const open = !!menu && !menu.classList.contains('is-open');
+      if (open && document.getElementById('page-analysis').classList.contains('hidden')) {
+        switchTab('analysis');
+      }
+      setAnalysisMenu(open);
+    }
+
+    function openChapter(id) {
+      closeAnalysisMenu();
+      switchTab('analysis');
+      setChapter(id);
+    }
+
+    document.addEventListener('click', event => {
+      if (!event.target.closest || !event.target.closest('#analysis-menu')) closeAnalysisMenu();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeAnalysisMenu();
+    });
+
     function switchTab(tabId) {
       document.querySelectorAll('main').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('.tabs .tab').forEach(el => el.classList.remove('is-active'));
 
       document.getElementById('page-' + tabId).classList.remove('hidden');
+      if (tabId !== 'analysis') closeAnalysisMenu();
       document.getElementById('tab-' + tabId).classList.add('is-active');
 
       // The Report Summary block is shared: it lives in the overview's left
@@ -5979,29 +6071,14 @@
     PC_INDICATORS.forEach(ind => { PC_IND_BY_KEY[ind.key] = ind; });
 
     let pcRows = [];
-    // 'all' draws every dimension; a key narrows the chart to its signals.
-    // One dimension by default: ten similar lines at once read as spaghetti.
-    let pcDim = 'political';
+    // Dimensions whose signals are open in the week-by-week chart.
+    let ewOpen = new Set();
     let heatDim = 'all';   // 'all' compares dimensions, a key opens one
     // Zones start open; a folded one keeps its row so the grid still reads
     // as the six zones even with only the national picture wanted.
     const heatOpen = new Set();   // zones stay folded until the reader opens one
 
     const PC_WEEK_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' });
-    // The chart can carry all ten dimensions at once, and the theme's seven
-    // series tokens sit too close for that — the rose, amber and yellow read as
-    // one thick line at 2px. Hues are spread evenly over the wheel instead, so
-    // neighbouring lines and their legend keys never match.
-    function ewLineColors(count) {
-      const light = document.documentElement.getAttribute('data-theme') === 'light';
-      const step = 360 / Math.max(count, 6);
-      const out = [];
-      for (let i = 0; i < count; i++) {
-        out.push('hsl(' + Math.round((i * step + 4) % 360) + ', ' +
-          (light ? '68%, 39%' : '76%, 65%') + ')');
-      }
-      return out;
-    }
     const pctOf = (flag, n) => (n ? Math.round((flag / n) * 100) : null);
 
     // Reporting windows arrive as "2026-10-19 to 2026-10-25", and a few as a
@@ -6198,11 +6275,9 @@
       const stateKeys = Object.keys(model.states);
       const reports = model.rows.length;
 
-      let answered = 0, flag = 0, lgas = {};
+      const lgas = {};
       stateKeys.forEach(k => {
         const b = model.states[k];
-        answered += b.answered;
-        flag += b.flag;
         Object.keys(b.lgas).forEach(l => { lgas[k + '|' + l] = 1; });
       });
 
@@ -6210,12 +6285,6 @@
       put('ew-reports-sub', reports
         ? stateKeys.length + ' states · ' + Object.keys(lgas).length + ' LGAs'
         : 'No PESEA reports for this selection');
-
-      const share = pctOf(flag, answered);
-      put('ew-signals', share === null ? '—' : share + '%');
-      put('ew-signals-sub', answered
-        ? answered.toLocaleString() + ' checklist answers'
-        : 'Risk-positive checklist answers');
 
       const weeks = pcWeeks(model);
       const last = weeks[weeks.length - 1];
@@ -6313,119 +6382,158 @@
       return out;
     }
 
-    // One line per signal in the chosen dimension. Counts would rise whenever
-    // reporting effort rose, so each point is the share of that week's answers
-    // that raise the flag; the week's report count sits in the tooltip.
-    function renderEwTrend(model) {
-      const canvas = document.getElementById('ewTrend');
-      if (!canvas) return;
-      // A canvas in a hidden view has no size to draw into; the chart is built
-      // on the way in instead.
-      const host = document.getElementById('tension-view-ew');
-      if (host && host.classList.contains('hidden')) return;
+    // One compact graph per dimension, stacked vertically with the weeks across
+    // the bottom. A dimension opens to show one graph per signal inside it.
+    // Each week-to-week segment carries its own colour — a fall is green, a rise
+    // is red — and the lines are dashed, so the direction of travel reads plainly.
+    function ewValue(t) {
+      return t && t.n ? Math.round((t.flag / t.n) * 100) : null;
+    }
 
-      if (charts.ew) { charts.ew.destroy(); delete charts.ew; }
+    function ewChartRows(model, weeks) {
+      const rows = [{
+        kind: 'all', key: 'all', name: 'All dimensions',
+        values: weeks.map(w => ewValue(ewWeekTotal(w)))
+      }];
+      PC_DIMENSIONS.forEach(d => {
+        if (!PC_INDICATORS.some(i => i.dim === d.key && i.col)) return;
+        rows.push({
+          kind: 'dim', key: d.key, name: d.name,
+          values: weeks.map(w => ewValue(w.byDim[d.key]))
+        });
+        if (!ewOpen.has(d.key)) return;
+        PC_INDICATORS.filter(i => i.dim === d.key && i.col).forEach(ind => {
+          rows.push({
+            kind: 'ind', key: ind.key, name: ind.label, title: ind.full || ind.label,
+            values: weeks.map(w => ewValue(w.byInd[ind.key]))
+          });
+        });
+      });
+      return rows;
+    }
+
+    // A heat row is a dimension (or one of its signals) with a cell per week:
+    // the cell's colour and number are the share of that week's answers that
+    // raise the signal.
+    // The wash is the state x risk grid's own stepped danger tint (15/30/46/62%
+    // of --danger), so a shade means the same thing in both grids.
+    function ewHeatFill(v) {
+      const p = Math.round(v);
+      const step = p >= 76 ? 62 : p >= 51 ? 46 : p >= 26 ? 30 : p > 0 ? 15 : 0;
+      if (!step) return 'background:var(--surface-2)';
+      return 'background:color-mix(in srgb, var(--danger) ' + step + '%, transparent)';
+    }
+
+    // The latest week against the week before it: a move of three points or
+    // more names a direction, anything smaller reads as steady.
+    function ewTrajectory(values) {
+      const seen = [];
+      for (let i = values.length - 1; i >= 0 && seen.length < 2; i--) {
+        if (values[i] !== null) seen.push(values[i]);
+      }
+      if (seen.length < 2) {
+        return { cls: 'is-flat', text: '\u2014', title: 'Not enough weeks to compare' };
+      }
+      const d = seen[0] - seen[1];
+      const pts = Math.abs(d) + ' pts';
+      if (Math.abs(d) < 3) {
+        return { cls: 'is-flat', text: 'Steady', title: 'Within 3 points of the week before' };
+      }
+      if (d > 0) {
+        return { cls: 'is-up', text: 'Rising +' + Math.abs(d), title: 'Risk up ' + pts + ' on the week before' };
+      }
+      return { cls: 'is-down', text: 'Easing \u2212' + Math.abs(d), title: 'Risk down ' + pts + ' on the week before' };
+    }
+
+    function renderEwTrend(model) {
+      const host = document.getElementById('ewRows');
+      if (!host) return;
+      // The chapter's views are built on the way in; a hidden host measures 0.
+      const view = document.getElementById('tension-view-ew');
+      if (view && view.classList.contains('hidden')) return;
 
       const weeks = pcWeeks(model);
-      // With every dimension chosen the chart carries one line for the country
-      // as a whole; picking a dimension opens up the indices inside it.
-      const showAll = pcDim === 'all';
-      const series = showAll
-        ? [{ key: 'all', label: 'All dimensions', full: 'Every dimension combined', agg: true, total: true }]
-        : PC_INDICATORS.filter(ind => ind.dim === pcDim && ind.col)
-            .map(ind => ({ key: ind.key, label: ind.label, full: ind.full, agg: false }));
-      const note = document.getElementById('ew-note');
       const hint = document.getElementById('ew-hint');
-      const dimDef = PC_DIMENSIONS.filter(d => d.key === pcDim)[0];
+      const note = document.getElementById('ew-note');
 
-      if (hint) {
-        hint.textContent = showAll
-          ? 'All dimensions · share of each week\'s answers'
-          : dimDef.name + ' · share of each week\'s reports';
-      }
+      if (hint) hint.textContent = 'Share of each week\'s answers that raise a warning';
 
-      if (!weeks.length || !series.length) {
-        if (note) note.textContent = 'No PESEA reports fall inside this selection yet.';
+      if (!weeks.length) {
+        host.innerHTML = '<p class="rows-empty">No PESEA reports fall inside this selection yet.</p>';
+        if (note) note.textContent = '';
         return;
       }
 
       if (note) {
-        note.textContent = 'Each point is the share of that week\'s answers that raise ' +
-          (showAll ? 'at least one warning' : 'the signal') + ', so the line does not move with the ' +
-          'number of monitors who reported. Weeks are placed by the reporting window\'s end date. ' +
-          'The monitor checklist follows the year, date-range and state slicers only; category, ' +
-          'cycle and period filters do not apply to it.';
-        note.title = showAll
-          ? 'One line: every dimension combined, so it is the share of all answers that raise any warning.'
-          : 'Signals on this chart: ' + series.map(s => s.label + ' — ' + s.full).join('; ');
+        note.textContent = 'One cell per week: the share of that week\'s answers that raise the signal, so a ' +
+          'week does not darken with the number of monitors who reported. Pale is calm, deep red is a week ' +
+          'that raises a lot of warnings. Trajectory sets the latest week against the week before it: ' +
+          'Rising is risk up, Easing risk down, Steady within three points. Open a dimension for the ' +
+          'signals inside it. Weeks are placed by ' +
+          'the reporting window\'s end date. The monitor checklist follows the year, date-range and state ' +
+          'slicers only; category, cycle and period filters do not apply to it.';
       }
 
+      const rows = ewChartRows(model, weeks);
       const labels = weeks.map(w => PC_WEEK_FMT.format(w.start));
-      const colours = ewLineColors(series.length);
-      const datasets = series.map((s, i) => ({
-        label: s.label,
-        data: weeks.map(w => {
-          const t = s.total ? ewWeekTotal(w) : (s.agg ? w.byDim[s.key] : w.byInd[s.key]);
-          return t && t.n ? Math.round((t.flag / t.n) * 100) : null;
-        }),
-        borderColor: colours[i],
-        backgroundColor: colours[i],
-        borderWidth: 2, tension: 0.35, cubicInterpolationMode: 'monotone', spanGaps: true,
-        pointRadius: 2, pointHoverRadius: 4.5, pointBorderWidth: 0
-      }));
+      const cols = 'minmax(150px, var(--ew-name)) repeat(' + labels.length +
+        ', minmax(0, 1fr)) 40px 86px';
+      const keep = host.scrollTop;
 
-      charts.ew = new Chart(canvas, {
-        type: 'line',
-        data: { labels: labels, datasets: datasets },
-        options: {
-          responsive: true, maintainAspectRatio: false, animation: false,
-          interaction: { mode: 'index', intersect: false },
-          layout: { padding: { top: 10, right: 6, bottom: 0 } },
-          plugins: {
-            datalabels: { display: false },
-            legend: {
-              display: series.length > 1,
-              position: 'bottom',
-              labels: {
-                color: THEME.text2, boxWidth: 6, boxHeight: 6, usePointStyle: true,
-                font: { size: 9.5, weight: '600' }, padding: 4
-              }
-            },
-            tooltip: {
-              backgroundColor: THEME.tooltipBg, titleColor: THEME.text,
-              bodyColor: THEME.text, borderColor: THEME.grid, borderWidth: 1,
-              callbacks: {
-                label: ctx => ' ' + ctx.dataset.label + ': ' +
-                  (ctx.parsed.y === null ? 'no reports' : ctx.parsed.y + '%'),
-                footer: items => {
-                  const w = weeks[items[0].dataIndex];
-                  if (!w) return '';
-                  return w.reports + (w.reports === 1 ? ' report' : ' reports') + ' that week';
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: THEME.text2, font: { size: 10.5 }, maxRotation: 0, autoSkipPadding: 10 }
-            },
-            y: {
-              beginAtZero: true, max: 100,
-              grid: { color: THEME.grid },
-              ticks: {
-                color: THEME.text2, font: { size: 10.5 }, precision: 0, stepSize: 25,
-                callback: v => v + '%'
-              }
-            }
-          }
+      const cellsOf = r => r.values.map((v, i) => {
+        if (v === null) {
+          return '<span class="ew-heat-cell is-empty" title="' + escAttr(labels[i]) +
+            ' &middot; no reports">&ndash;</span>';
         }
-      });
-    }
+        return '<span class="ew-heat-cell" style="' + ewHeatFill(v) + '" title="' + escAttr(labels[i]) +
+          ' &middot; ' + v + '% of answers raise a warning">' + v + '%</span>';
+      }).join('');
 
-    function setPcDim(value) {
-      pcDim = value;
-      renderPc();
+      const openRow = (kind, attr) => '<div class="ew-heat-row' + (kind === 'ind' ? ' is-ind' : '') +
+        '"' + (attr || '') + ' style="grid-template-columns:' + cols + '">';
+
+      const html = ['<div class="ew-heat-head" style="grid-template-columns:' + cols + '">' +
+        '<span class="ew-heat-name"></span>' +
+        labels.map(l => '<span>' + escHtml(l) + '</span>').join('') +
+        '<span class="ew-heat-last">Latest</span>' +
+        '<span class="ew-traj-head">Trajectory</span>' +
+        '</div>'];
+
+      rows.forEach(r => {
+        const last = r.values[r.values.length - 1];
+        const traj = ewTrajectory(r.values);
+        const tail = '<span class="ew-heat-last">' + (last === null ? '&ndash;' : last + '%') + '</span>' +
+          '<span class="ew-traj ' + traj.cls + '" title="' + escAttr(traj.title) + '">' +
+            traj.text + '</span>';
+        if (r.kind === 'dim') {
+          const open = ewOpen.has(r.key);
+          html.push(openRow('dim') +
+            '<button type="button" class="ew-heat-name-cell" data-dim="' + escAttr(r.key) +
+              '" aria-expanded="' + (open ? 'true' : 'false') + '" title="' + escAttr(r.name) + '">' +
+              '<span class="ew-chev">' + (open ? '&#9662;' : '&#9654;') + '</span>' +
+              '<span class="ew-heat-name">' + escHtml(r.name) + '</span>' +
+            '</button>' + cellsOf(r) + tail + '</div>');
+          return;
+        }
+        html.push(openRow('ind') +
+          '<div class="ew-heat-name-cell" title="' + escAttr(r.title || r.name) + '">' +
+            '<span class="ew-chev"></span>' +
+            '<span class="ew-heat-name">' + escHtml(r.name) + '</span>' +
+          '</div>' + cellsOf(r) + tail + '</div>');
+      });
+
+      host.innerHTML = html.join('');
+
+      host.querySelectorAll('.ew-heat-name-cell[data-dim]').forEach(btn => {
+        btn.onclick = () => {
+          const key = btn.dataset.dim;
+          if (ewOpen.has(key)) ewOpen.delete(key);
+          else ewOpen.add(key);
+          renderEwTrend(model);
+        };
+      });
+
+      host.scrollTop = keep;
     }
 
     // States down the side, signals across: a cell is the share of that
@@ -6731,14 +6839,6 @@
     }
 
     (function bindPcControls() {
-      const select = document.getElementById('ew-dim');
-      if (!select) return;
-      select.innerHTML = '<option value="all">All dimensions</option>' +
-        PC_DIMENSIONS.map(d =>
-          '<option value="' + d.key + '">' + escHtml(d.name) + '</option>').join('');
-      select.value = pcDim;
-      select.onchange = () => setPcDim(select.value);
-
       const heat = document.getElementById('heat-dim');
       if (!heat) return;
       heat.innerHTML = '<option value="all">All dimensions</option>' +
