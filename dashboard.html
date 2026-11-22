@@ -1049,10 +1049,6 @@
       border-left: 3px solid var(--danger);
     }
     .fin-caveat b { color: var(--text); }
-    .fin-method {
-      margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-2);
-    }
-    .fin-method b { color: var(--text); font-weight: 800; }
 
     /* =====================================================================
        TENSION PAGE
@@ -1660,7 +1656,6 @@
       #chapter-money .fin-card { min-height: 0; }
       #chapter-money .fin-plot { min-height: 190px; }
       #chapter-money .fin-rank { max-height: none; overflow: hidden; }
-      #chapter-money .fin-method { flex: 0 0 auto; margin-top: 0; }
     }
 
   </style>
@@ -2305,9 +2300,6 @@
         <p class="fin-caveat" id="fin-caveat"><b>Allegations, not findings.</b> Party names come from
           monitor reports alleging involvement. This dashboard has not investigated or verified any
           allegation, and a mention is not a conviction.</p>
-
-        <p class="muted fin-method" id="fin-method">Party finance and party-level allegation figures load
-          from the published sheets.</p>
 
       </div>
     </section>
@@ -6290,13 +6282,6 @@
       set('finKpiTopSub', topTrouble && topTrouble.accused
         ? topTrouble.accused + ' mentions \u00b7 ' + sharePct(topTrouble.accused, model.totAccused) + '% of all'
         : 'no party named yet');
-
-      set('fin-method',
-        (financeFailed ? 'Finance sheet unavailable, so spend figures are missing. ' : '') +
-        'Spend is total declared campaign expenditure from the 2027 presidential filings. ' +
-        'Allegations are PESEA monitor reports naming a party as accused of hiring or mobilising ' +
-        'thugs or militia. The correlation is descriptive only: a small, spend-skewed sample with ' +
-        'no confidence interval, and it does not show that spending causes allegations.');
 
       // Correlation runs over the finance sheet's own parties only: a party
       // with no filing has no spend to correlate.
