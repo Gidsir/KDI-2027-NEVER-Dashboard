@@ -1366,34 +1366,24 @@
       background: var(--bg); border-bottom: 1px solid var(--border);
       padding: 8px 0 9px; margin: -6px 0 12px;
     }
-    .analysis-steps-inner {
-      display: flex; align-items: stretch; gap: 3px;
-      padding: 4px; border: 1px solid var(--border); border-radius: 999px;
-      background: var(--surface-2);
+    .analysis-steps-inner { display: flex; align-items: center; gap: 10px; }
+    .step-label {
+      font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--text-3); white-space: nowrap;
     }
-    .step-btn {
-      appearance: none; flex: 1 1 0; min-width: 0; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      border: 1px solid transparent; border-radius: 999px; background: transparent;
-      color: var(--text-2); font-family: inherit; font-size: 12px; font-weight: 600;
-      padding: 6px 8px; white-space: nowrap;
-      transition: background .15s, color .15s, border-color .15s;
+    .step-select {
+      appearance: none; -webkit-appearance: none; cursor: pointer;
+      flex: 0 1 540px; min-width: 0; width: 100%;
+      border: 1px solid var(--border); border-radius: 999px;
+      background-color: var(--surface);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center; background-size: 11px 8px;
+      color: var(--text); font-family: inherit; font-size: 12.5px; font-weight: 600;
+      padding: 8px 34px 8px 14px; box-shadow: var(--shadow);
+      text-overflow: ellipsis;
     }
-    .step-btn:hover, .step-btn:focus-visible { background: var(--surface); color: var(--text); }
-    .step-btn .step-num {
-      color: var(--text-3); font-size: 10px; font-weight: 800;
-      font-variant-numeric: tabular-nums; letter-spacing: .03em;
-    }
-    .step-btn.is-active {
-      background: var(--surface); border-color: var(--border); color: var(--text);
-      box-shadow: var(--shadow);
-    }
-    .step-btn.is-active .step-num { color: var(--accent); }
-    @media (max-width: 700px) {
-      .analysis-steps-inner { overflow-x: auto; scrollbar-width: none; }
-      .analysis-steps-inner::-webkit-scrollbar { display: none; }
-      .step-btn { flex: 0 0 auto; padding: 6px 10px; font-size: 11px; }
-    }
+    .step-select:hover { border-color: var(--border-2); }
+    .step-select:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent-soft); outline-offset: 1px; }
 
     #page-analysis { padding-top: 0; }
     #page-analysis { padding-top: 0; }
@@ -1433,38 +1423,38 @@
     /* 01 Pressure, plain figures: one type scale and no accent colour, so the
        numbers read as data rather than as alerts. */
     #chapter-tension .kpi {
-      padding: 14px 16px 15px; border-radius: 12px;
+      padding: 9px 12px 10px; border-radius: 10px;
     }
     #chapter-tension .kpi-value {
-      margin-top: 6px; font-size: 26px; font-weight: 600;
-      letter-spacing: -.02em; color: var(--text);
+      margin-top: 2px; font-size: 19px; font-weight: 600;
+      letter-spacing: -.015em; color: var(--text);
     }
     #chapter-tension .kpi-label {
-      margin-top: 4px; font-size: 11.5px; font-weight: 600;
+      margin-top: 1px; font-size: 10.5px; font-weight: 600;
       letter-spacing: 0; color: var(--text-2);
     }
     #chapter-tension .kpi-sub {
-      margin-top: 3px; font-size: 11px; font-weight: 500; color: var(--text-3);
+      margin-top: 1px; font-size: 10px; font-weight: 500; color: var(--text-3);
     }
 
     /* Watch first: the rank numbers go, the state leads, the share follows in
        the same colour and weight as the rest of the text. */
-    #chapter-tension .ew-tile { padding: 6px 14px; gap: 2px; }
+    #chapter-tension .ew-tile { padding: 4px 12px; gap: 1px; }
     #chapter-tension .ew-tile:first-child { padding-left: 2px; }
     #chapter-tension .ew-rank { display: none; }
     #chapter-tension .ew-state {
-      font-size: 12.5px; font-weight: 600; letter-spacing: 0; color: var(--text);
+      font-size: 11.5px; font-weight: 600; letter-spacing: 0; color: var(--text);
     }
-    #chapter-tension .ew-line { gap: 8px; }
+    #chapter-tension .ew-line { gap: 7px; }
     #chapter-tension .ew-score {
-      font-size: 15px; font-weight: 600; color: var(--text-2);
+      font-size: 13px; font-weight: 600; color: var(--text-2);
     }
-    #chapter-tension .ew-score small { font-size: 10px; font-weight: 600; margin-left: 0; }
-    #chapter-tension .ew-why { font-size: 10.5px; font-weight: 500; color: var(--text-3); }
+    #chapter-tension .ew-score small { font-size: 9.5px; font-weight: 600; margin-left: 0; }
+    #chapter-tension .ew-why { font-size: 10px; font-weight: 500; color: var(--text-3); }
 
-    #chapter-money .fin-grid { align-items: start; }
+    #chapter-money .fin-grid { align-items: stretch; }
     #chapter-money .fin-plot { min-height: 300px; }
-    #chapter-money .fin-rank { max-height: 300px; overflow-y: auto; }
+    #chapter-money .fin-rank { max-height: none; overflow: hidden; justify-content: space-between; }
 
     /* One screen per step: the active chapter fills the window, and only its
        long lists scroll, inside their own cards. Narrow or short windows keep
@@ -1506,10 +1496,10 @@
 
       /* 04 Money: figures, then plot and ranking. */
       #chapter-money .fin-kpis { flex: 0 0 auto; }
-      #chapter-money .fin-grid { flex: 0 0 auto; align-items: start; }
+      #chapter-money .fin-grid { flex: 0 0 auto; align-items: stretch; }
       #chapter-money .fin-card { min-height: 0; }
       #chapter-money .fin-plot { min-height: 190px; }
-      #chapter-money .fin-rank { max-height: 150px; }
+      #chapter-money .fin-rank { max-height: none; overflow: hidden; }
       #chapter-money .fin-method { margin-top: 0; }
     }
 
@@ -1777,10 +1767,13 @@
     <nav class="analysis-steps" aria-label="Analysis steps">
       <div class="wrap">
         <div class="analysis-steps-inner">
-          <button type="button" class="step-btn is-active" data-step="chapter-tension" aria-pressed="true" onclick="setChapter('chapter-tension')"><span class="step-num">01</span>Pressure</button>
-          <button type="button" class="step-btn" data-step="chapter-actors" aria-pressed="false" onclick="setChapter('chapter-actors')"><span class="step-num">02</span>Who acts</button>
-          <button type="button" class="step-btn" data-step="chapter-compare" aria-pressed="false" onclick="setChapter('chapter-compare')"><span class="step-num">03</span>Differences</button>
-          <button type="button" class="step-btn" data-step="chapter-money" aria-pressed="false" onclick="setChapter('chapter-money')"><span class="step-num">04</span>Money</button>
+          <label class="step-label" for="stepSelect">Step</label>
+          <select id="stepSelect" class="step-select" aria-label="Analysis step" onchange="setChapter(this.value)">
+            <option value="chapter-tension" selected>01 &middot; Early warning signals</option>
+            <option value="chapter-actors">02 &middot; Actor&ndash;action dynamics by state</option>
+            <option value="chapter-compare">03 &middot; All state comparison</option>
+            <option value="chapter-money">04 &middot; Political parties visibility and allegations of violence</option>
+          </select>
         </div>
       </div>
     </nav>
@@ -2548,30 +2541,14 @@
         const el = document.getElementById(key);
         if (el) el.classList.toggle('is-active', key === id);
       });
-      document.querySelectorAll('.step-btn').forEach(btn => {
-        const on = btn.dataset.step === id;
-        btn.classList.toggle('is-active', on);
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-      });
+      const select = document.getElementById('stepSelect');
+      if (select && select.value !== id) select.value = id;
       const page = document.getElementById('page-analysis');
       if (page) page.scrollTop = 0;
       resizeCharts();
       requestAnimationFrame(resizeCharts);
       setTimeout(() => { resizeCharts(); rebuildStuckCharts(); }, 120);
     }
-
-    // Arrow keys walk the segmented control, as a step switch should.
-    document.addEventListener('keydown', e => {
-      if (!e.target.closest || !e.target.closest('.step-btn')) return;
-      const dir = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-      if (!dir) return;
-      e.preventDefault();
-      const i = ANALYSIS_STEPS.indexOf(e.target.dataset.step);
-      const next = ANALYSIS_STEPS[(i + dir + ANALYSIS_STEPS.length) % ANALYSIS_STEPS.length];
-      setChapter(next);
-      const btn = document.querySelector('.step-btn[data-step="' + next + '"]');
-      if (btn) btn.focus();
-    });
 
     function switchTab(tabId) {
       document.querySelectorAll('main').forEach(el => el.classList.add('hidden'));
