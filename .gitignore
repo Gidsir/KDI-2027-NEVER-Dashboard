@@ -8,3 +8,7 @@ server.pid
 
 # Editor / agent state
 .freebuff/
+.cloud-attachments/
+
+# Working screenshots from local checks
+shot-*.png
